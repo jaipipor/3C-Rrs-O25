@@ -1,0 +1,10 @@
+numpy>=1.24
+pandas
+xarray
+lmfit
+scipy
+matplotlib
+pytest
+black
+ruff
+pre-commit

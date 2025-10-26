@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.env
+.venv/
+venv/
+.envrc
+
+# Jupyter
+.ipynb_checkpoints
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# distribution / build
+build/
+dist/
+*.egg-info/
+
+# data / outputs
+data/*.nc
+data/*.npz
+
+# VS Code workspace
+.vscode/settings.json

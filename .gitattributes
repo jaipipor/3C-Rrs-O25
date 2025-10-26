@@ -1,0 +1,4 @@
+# keep text normalization and track data with LFS
+data/* filter=lfs diff=lfs merge=lfs -text
+*.npz filter=lfs diff=lfs merge=lfs -text
+G0*.txt filter=lfs diff=lfs merge=lfs -text
