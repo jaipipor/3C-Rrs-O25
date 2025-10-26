@@ -34,19 +34,27 @@ and may change in future versions.
 License: GPL-3.0 (inherit from project)
 Author: Jaime Pitarch (refactor for repository)
 """
+
 import warnings
+import hashlib
+import os
+from collections import OrderedDict
+import lmfit as lm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
 # suppress a noisy warning from the `uncertainties` package triggered indirectly
 # by lmfit when parameters have zero std_dev. This warning is harmless here but
 # pollutes output; if you prefer to keep it visible, remove the next line.
-warnings.filterwarnings("ignore", message="Using UFloat objects with std_dev==0 may give unexpected results.", category=UserWarning, module="uncertainties.core")
+warnings.filterwarnings(
+    "ignore",
+    message="Using UFloat objects with std_dev==0 may give unexpected results.",
+    category=UserWarning,
+    module="uncertainties.core",
+)
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import lmfit as lm
-import os
-import hashlib
-from collections import OrderedDict
+
 
 # ---------------------------------------------------------------------------
 # Core model class
@@ -63,19 +71,19 @@ class rrs_model_3C(object):
       `fit_LtEs(...)` which performs a fit of measured Lt/Es using lmfit.
     """
 
-    def __init__(self, data_folder='C:/Users/Jaime/Documents/3C_Python/Data'):
+    def __init__(self, data_folder="C:/Users/Jaime/Documents/3C_Python/Data"):
         # store the path where auxiliary data files are expected
         self.data_folder = data_folder
         # --- load aph templates (provided externally) ---
-        path = os.path.join(self.data_folder, 'vars_aph_v2.npz')
+        path = os.path.join(self.data_folder, "vars_aph_v2.npz")
         aph_data = np.load(path)
         # wavelength axis (squeezed in case it was saved as (nw,) or (1,nw))
-        self.l_int = aph_data['l_int'].squeeze()
+        self.l_int = aph_data["l_int"].squeeze()
         # 'aph_norm_55' is expected to contain the 55 templates already normalized
         # by their value around 670 nm (i.e. my_spec / normF from the original v7).
         # vars_aph.npz is expected to contain 'aph_norm_55' and 'aph670_bounds'. Use them directly
-        self._aph_norm_55 = aph_data['aph_norm_55']  # shape (55, nw)
-        self._aph670_bounds = aph_data['aph670_bounds'].squeeze()
+        self._aph_norm_55 = aph_data["aph_norm_55"]  # shape (55, nw)
+        self._aph670_bounds = aph_data["aph670_bounds"].squeeze()
 
         # precompute water IOP file content (raw array)
         self._load_water_iops()
@@ -98,7 +106,9 @@ class rrs_model_3C(object):
         # Load water absorption (aw) and pure-water backscatter (bbw) table.
         # Filename is historical; the file is expected to have three columns:
         # wavelength, aw, bbw and some header lines (skipped with skiprows=8).
-        data_path = os.path.join(self.data_folder, 'abs_scat_seawater_20d_35PSU_20230922_short.txt') # aw: WOPP v3. bbw: Zhang 2009
+        data_path = os.path.join(
+            self.data_folder, "abs_scat_seawater_20d_35PSU_20230922_short.txt"
+        )  # aw: WOPP v3. bbw: Zhang 2009
         raw = np.loadtxt(data_path, skiprows=8)
         # if file had extra trailing row handling in original code
         raw = raw[:-1] if raw.shape[1] >= 3 else raw
@@ -111,6 +121,7 @@ class rrs_model_3C(object):
         az = np.arange(0, 181, 15)
         tv = np.concatenate([np.arange(0, 81, 10), [87.5]])
         ts = tv.copy()
+
         # helper to load and reshape exactly as original code
         def ld3(fname):
             path = os.path.join(self.data_folder, fname)
@@ -123,12 +134,13 @@ class rrs_model_3C(object):
         self._G_tv = tv
         self._G_az = az
         # load the 4 G tables as arrays
-        self._G0w = ld3('G0w.txt')
-        self._G1w = ld3('G1w.txt')
-        self._G0p = ld3('G0p.txt')
-        self._G1p = ld3('G1p.txt')
+        self._G0w = ld3("G0w.txt")
+        self._G1w = ld3("G1w.txt")
+        self._G0p = ld3("G0p.txt")
+        self._G1p = ld3("G1p.txt")
         # build scipy RegularGridInterpolator objects (fast C evaluation)
         from scipy.interpolate import RegularGridInterpolator
+
         # The interpolators are created using axes order (ts, tv, az)
         self._G_i0 = RegularGridInterpolator((ts, tv, az), self._G0w)
         self._G_i1 = RegularGridInterpolator((ts, tv, az), self._G1w)
@@ -152,23 +164,27 @@ class rrs_model_3C(object):
         a = abs(float(a))
         pt = (float(s), float(v), a)
         # use the interpolator objects created in _load_G_tables
-        return (float(self._G_i0(pt)), float(self._G_i1(pt)), float(self._G_i2(pt)), float(self._G_i3(pt)))
-    
+        return (
+            float(self._G_i0(pt)),
+            float(self._G_i1(pt)),
+            float(self._G_i2(pt)),
+            float(self._G_i3(pt)),
+        )
+
     def model_3C(self):
         # cache references locally for speed (these variables are closed over by f)
-        lw_aw_bbw = None  # will be loaded inside f to ensure up-to-date
+        # lw_aw_bbw = None  # will be loaded inside f to ensure up-to-date
         l_int = self.l_int
         aph670_bounds = self._aph670_bounds
         aph_norm_55 = self._aph_norm_55
 
         # The forward model is returned as a callable `f` so that repeated calls
         # execute the inner implementation without attribute lookups on the class.
-        def f(wl, beta, alpha,
-              C, N, Y, SNAP, Sg, geom, anc, LiEs, rho, rho_d, rho_s):
+        def f(wl, beta, alpha, C, N, Y, SNAP, Sg, geom, anc, LiEs, rho, rho_d, rho_s):
             # short local refs avoid repeated attribute lookup
             lw_aw_bbw = self.lw_aw_bbw
             G_eval = self._G_eval
-            preG = getattr(self, '_G_precomputed', None)
+            preG = getattr(self, "_G_precomputed", None)
 
             # unpack ancillary parameters and geometry
             (am, rh, pressure) = anc
@@ -189,15 +205,17 @@ class rrs_model_3C(object):
             M = 1.0 / (cosths + 0.50572 * (90.0 + 6.07995 - theta_s) ** (-1.6364))
             M_ = M * pressure / 1013.25
             # Rayleigh transmittance term (Tr)
-            Tr = np.exp(- M_ / (115.6406 * (wl / 1000.0) ** 4 - 1.335 * (wl / 1000.0) ** 2))
+            Tr = np.exp(
+                -M_ / (115.6406 * (wl / 1000.0) ** 4 - 1.335 * (wl / 1000.0) ** 2)
+            )
             # aerosol transmittance term (Tas)
-            Tas = np.exp(- omega_a * tau_a * M)
+            Tas = np.exp(-omega_a * tau_a * M)
             Esd = Tr * Tas
             # ESS term accounts for the scattered skylight partition
-            Ess = 0.5 * (1 - Tr ** 0.95) + Tr ** 1.5 * (1 - Tas) * Fa
+            Ess = 0.5 * (1 - Tr**0.95) + Tr**1.5 * (1 - Tas) * Fa
             EsdEs = Esd / (Esd + Ess)
-            EssEs = 1- EsdEs
-            
+            EssEs = 1 - EsdEs
+
             # Surface reflection Rg: combination of instrument sky term and
             # partitioned atmospheric terms weighted by rho coefficients
             Rg = rho * LiEs + rho_d * EsdEs / np.pi + rho_s * EssEs / np.pi
@@ -218,13 +236,12 @@ class rrs_model_3C(object):
                 aw, bbw = cached_wl
 
             # phytoplankton absorption: select template by C bin
-            aph670 = 0.019092732293411 * C ** 0.955677209349669
+            aph670 = 0.019092732293411 * C**0.955677209349669
             bin_idx = np.searchsorted(aph670_bounds, aph670)
             if bin_idx < 0:
                 bin_idx = 0
             elif bin_idx >= aph_norm_55.shape[0]:
                 bin_idx = aph_norm_55.shape[0] - 1
-
 
             tpl_key = f"{wl_key}:bin{bin_idx}"
             base_interp = self._aph_interp_cache.get(tpl_key)
@@ -242,29 +259,28 @@ class rrs_model_3C(object):
             # scale template to absolute aph using aph670 estimate
             aph = base_interp * aph670
             aph = np.maximum(aph, 0.0)
-                        
+
             # NAP absorption (non-algal particles)
             laNAPstar440 = -0.1886 * np.exp(-1.0551 * np.log10(C / N)) - 1.27
             laNAPstar440 = np.clip(laNAPstar440, -3, -0.5)
-            aNAP440 = (10 ** laNAPstar440) * N
+            aNAP440 = (10**laNAPstar440) * N
             aNAP = aNAP440 * np.exp(np.clip(-SNAP * (wl - 440), -700, 700))
-
 
             # CDOM absorption (exponential slope Sg)
             ag = Y * np.exp(np.clip(-Sg * (wl - 440), -700, 700))
-            
+
             # Particulate backscattering model (power-law)
-            T = N + 0.07 * C #Brando and Dekker (2003)
-            bbp560=0.013207124962878 * T ** 0.814981148538268 # power law derived from PB24
-            eta=0.8624 -0.2147*np.log10(T) -0.06528*C/T # Derived from PB24
-            bbp=bbp560 * (560 / wl) ** eta
+            T = N + 0.07 * C  # Brando and Dekker (2003)
+            bbp560 = (
+                0.013207124962878 * T**0.814981148538268
+            )  # power law derived from PB24
+            eta = 0.8624 - 0.2147 * np.log10(T) - 0.06528 * C / T  # Derived from PB24
+            bbp = bbp560 * (560 / wl) ** eta
             bb_tot = bbw + bbp
-            
 
             a_tot = aw + aph + aNAP + ag
             omw = bbw / (a_tot + bb_tot)
             omp = (bb_tot - bbw) / (a_tot + bb_tot)
-            
 
             # use fast G eval: either reuse precomputed tuple or interpolate
             if preG is not None:
@@ -278,7 +294,9 @@ class rrs_model_3C(object):
 
         return f
 
-    def fit_LtEs(self, wl, LiEs, LtEs, params, weights, geom, anc, method='leastsq', verbose=True):
+    def fit_LtEs(
+        self, wl, LiEs, LtEs, params, weights, geom, anc, method="leastsq", verbose=True
+    ):
         """
         Fit Lt/Es by minimizing residuals. Returns (out, Rrs_mod, Rg)
 
@@ -301,19 +319,32 @@ class rrs_model_3C(object):
             pv = p.valuesdict()
             # evaluate model using current parameter vector
             Rrs_mod, Rg = self.model(
-                wl, pv['beta'], pv['alpha'], pv['C'], pv['N'], pv['Y'], pv['SNAP'], pv['Sg']
-                , geom, anc, LiEs, pv['rho'], pv['rho_d'], pv['rho_s']
+                wl,
+                pv["beta"],
+                pv["alpha"],
+                pv["C"],
+                pv["N"],
+                pv["Y"],
+                pv["SNAP"],
+                pv["Sg"],
+                geom,
+                anc,
+                LiEs,
+                pv["rho"],
+                pv["rho_d"],
+                pv["rho_s"],
             )
             # return vector residuals scaled by sqrt(weights) so least-squares objective
             # equals sum(weights * (LtEs - Rrs_mod - Rg)**2)
 
-            
             res_data = (LtEs - Rrs_mod - Rg) * np.sqrt(weights)
 
             # per-wavelength penalty: neg = max(0, -Rg)
-            neg = np.clip(-Rg, 0.0, None)           # same shape as wl
-            penalty_weight = 1e6                     
-            res_pen = np.sqrt(penalty_weight) * neg  # linear in neg -> objective ~ penalty_weight * neg^2
+            neg = np.clip(-Rg, 0.0, None)  # same shape as wl
+            penalty_weight = 1e6
+            res_pen = (
+                np.sqrt(penalty_weight) * neg
+            )  # linear in neg -> objective ~ penalty_weight * neg^2
 
             return np.concatenate([res_data, res_pen])  # fixed size: 2*nw
 
@@ -321,23 +352,33 @@ class rrs_model_3C(object):
         # _G_precomputed is used by model_3C to bypass interpolator calls
         self._G_precomputed = self._G_eval(*geom)
         try:
-            if str(method).lower() == 'leastsq':
+            if str(method).lower() == "leastsq":
                 # scipy's leastsq doesn't accept an 'options' dict with 'disp'
                 out = lm.minimize(resid, params, method=method)
             else:
-                out = lm.minimize(resid, params, method=method, options={'disp': verbose})
-                
-                
-            
+                out = lm.minimize(
+                    resid, params, method=method, options={"disp": verbose}
+                )
+
             # Print common attributes if present
-            for attr in ('message', 'ier', 'nfev', 'nit', 'success', 'status', 'x', 'cost', 'fun'):
+            for attr in (
+                "message",
+                "ier",
+                "nfev",
+                "nit",
+                "success",
+                "status",
+                "x",
+                "cost",
+                "fun",
+            ):
                 if hasattr(out, attr):
                     print(f"{attr}: {getattr(out, attr)}")
 
             # If this was an lmfit / MINPACK run, interpret the `ier` code (1..5)
-            if hasattr(out, 'ier') and getattr(out, 'ier') is not None:
+            if hasattr(out, "ier") and getattr(out, "ier") is not None:
                 try:
-                    ier = int(getattr(out, 'ier'))
+                    ier = int(getattr(out, "ier"))
                 except Exception:
                     ier = None
                 if ier is not None:
@@ -346,91 +387,109 @@ class rrs_model_3C(object):
                         2: "converged: xtol satisfied (small change in parameters).",
                         3: "converged: ftol and xtol both satisfied.",
                         4: "converged: gtol satisfied (orthogonality/gradient condition).",
-                        5: "stopped: maxfev reached (maximum function evaluations)."
+                        5: "stopped: maxfev reached (maximum function evaluations).",
                     }
-                    print("MINPACK ier:", ier, "-", minpack_reasons.get(ier, "unknown / user-requested stop."))
+                    print(
+                        "MINPACK ier:",
+                        ier,
+                        "-",
+                        minpack_reasons.get(ier, "unknown / user-requested stop."),
+                    )
 
             # For scipy.optimize.OptimizeResult (least_squares) the message field is usually authoritative:
-            if hasattr(out, 'message') and not hasattr(out, 'ier'):
-                print("Optimizer message:", getattr(out, 'message'))    
-                
+            if hasattr(out, "message") and not hasattr(out, "ier"):
+                print("Optimizer message:", getattr(out, "message"))
+
             pv = out.params.valuesdict()
             # Re-evaluate model with optimized parameters to return final Rrs and Rg
             Rrs_mod, Rg = self.model(
-                wl, pv['beta'], pv['alpha'], pv['C'], pv['N'], pv['Y'], pv['SNAP'], pv['Sg'],
-                geom, anc, LiEs, pv['rho'], pv['rho_d'], pv['rho_s']
+                wl,
+                pv["beta"],
+                pv["alpha"],
+                pv["C"],
+                pv["N"],
+                pv["Y"],
+                pv["SNAP"],
+                pv["Sg"],
+                geom,
+                anc,
+                LiEs,
+                pv["rho"],
+                pv["rho_d"],
+                pv["rho_s"],
             )
-            
-            
+
             # --- print optimized parameters (place this right after pv = out.params.valuesdict()) ---
             print("\nOptimized parameters:")
-            if hasattr(out, 'params'):
-                # lmfit result: print value, stderr (if present), bounds and whether it varied
-                for name, par in out.params.items():
-                    stderr = getattr(par, 'stderr', None)
-                    stderr_str = f" ± {stderr:.3g}" if stderr not in (None, 0) else ""
-                    print(f"{name:12s} value={par.value:.6g}{stderr_str}   min={par.min}   max={par.max}   vary={par.vary}")
-            else:
-                # fallback for scipy OptimizeResult (least_squares)
-                # requires you to have a param_names list in scope matching out.x ordering
-                if hasattr(out, 'x') and 'param_names' in globals():
-                    for i, name in enumerate(param_names):
-                        print(f"{name:12s} value={out.x[i]:.6g}")
-                else:
-                    # best-effort: print whatever attributes result provides
-                    if hasattr(out, 'x'):
-                        print("Optimized vector (out.x):", out.x)
-                    else:
-                        print("No parameter object found in `out` to print.")
+            # lmfit result: print value, stderr (if present), bounds and whether it varied
+            for name, par in out.params.items():
+                stderr = getattr(par, "stderr", None)
+                stderr_str = f" ± {stderr:.3g}" if stderr not in (None, 0) else ""
+                print(
+                    f"{name:12s} value={par.value:.6g}{stderr_str}   min={par.min}   max={par.max}   vary={par.vary}"
+                )
 
-            
         finally:
             # ensure we remove the precomputed G to avoid stale cached values
-            if hasattr(self, '_G_precomputed'):
+            if hasattr(self, "_G_precomputed"):
                 del self._G_precomputed
         return out, Rrs_mod, Rg
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Example / diagnostic run when the module is executed directly.
     # Adjust `data_folder` to your local path if needed.
-    data_folder = 'C:/Users/Jaime/Documents/3C_python/Data'
-    data = pd.read_csv(os.path.join(data_folder, 'example_data_NIOZ_jetty_2.csv'), index_col=0, skiprows=15)
+    data_folder = "C:/Users/Jaime/Documents/3C_python/Data"
+    data = pd.read_csv(
+        os.path.join(data_folder, "example_data_NIOZ_jetty_2.csv"),
+        index_col=0,
+        skiprows=15,
+    )
     # extract wavelength and columns: Li, Lt, Es
-    wl = data.index.values; Li = data.iloc[:,0].values; Lt = data.iloc[:,1].values; Es = data.iloc[:,2].values
-#    geom=(40.62, 40, 135) # Baltic Sea
-#    geom=(59, 35, 6) # Jetty
-    geom=(59, 35, 100) # Jetty 2
-#    geom=(57.56653, 35, 97.513159) # Jetty 3
-    am=4
-    rh=60
-    pressure=1013.25
+    wl = data.index.values
+    Li = data.iloc[:, 0].values
+    Lt = data.iloc[:, 1].values
+    Es = data.iloc[:, 2].values
+    #    geom=(40.62, 40, 135) # Baltic Sea
+    #    geom=(59, 35, 6) # Jetty
+    geom = (59, 35, 100)  # Jetty 2
+    #    geom=(57.56653, 35, 97.513159) # Jetty 3
+    am = 4
+    rh = 60
+    pressure = 1013.25
     model = rrs_model_3C(data_folder=data_folder)
     params = lm.Parameters()
     params.add_many(
-		('C', 5, True, 0.1, 50, None),
-		('N', 1, True, 0.01, 100, None),
-		('Y', 0.5, True, 0.01, 5, None),
-		('SNAP', 0.015, True, 0.005, 0.03, None),
-		('Sg', 0.015, True, 0.005, 0.03, None),
-		('rho', 0.02, False, 0, 0.03, None),
-		('rho_d', 0.0, True, 0, 10, None),
-		('rho_s', 0.0, True, -.01, .01, None),
-		('alpha', 0.2, True, 0, 2, None),
-		('beta', 0.05, True, 0, 1, None)
-    )	
-    
+        ("C", 5, True, 0.1, 50, None),
+        ("N", 1, True, 0.01, 100, None),
+        ("Y", 0.5, True, 0.01, 5, None),
+        ("SNAP", 0.015, True, 0.005, 0.03, None),
+        ("Sg", 0.015, True, 0.005, 0.03, None),
+        ("rho", 0.02, False, 0, 0.03, None),
+        ("rho_d", 0.0, True, 0, 10, None),
+        ("rho_s", 0.0, True, -0.01, 0.01, None),
+        ("alpha", 0.2, True, 0, 2, None),
+        ("beta", 0.05, True, 0, 1, None),
+    )
+
     # weights: remove H2O band, downweight UV, upweight NIR
-    weights = np.where((wl >= 760) & (wl <= 765), 0, # Remove the ugly H2O feature
-              np.where(wl < 400, 1, # Some potential troubles at the UV
-              np.where(wl > 800, 5, 1))) # Let's power-up the NIR
-    
+    weights = np.where(
+        (wl >= 760) & (wl <= 765),
+        0,  # Remove the ugly H2O feature
+        np.where(
+            wl < 400, 1, np.where(wl > 800, 5, 1)  # Some potential troubles at the UV
+        ),
+    )  # Let's power-up the NIR
+
     # optional profiling block to inspect performance
-    import cProfile, pstats
+    import cProfile
+    import pstats
+
     pr = cProfile.Profile()
     pr.enable()
     try:
         reg, R_rs_mod, Rg = model.fit_LtEs(
-            wl, Li/Es, Lt/Es, params, weights, geom, anc=(am, rh, pressure)
+            wl, Li / Es, Lt / Es, params, weights, geom, anc=(am, rh, pressure)
         )
     except Exception as e:
         # Ensure profiler is disabled on error and provide diagnostics
@@ -440,20 +499,27 @@ if __name__ == '__main__':
         raise
     else:
         pr.disable()
-        ps = pstats.Stats(pr).sort_stats('cumtime')
+        ps = pstats.Stats(pr).sort_stats("cumtime")
         ps.print_stats(30)
-    
+
     # run a second fit (often used to inspect repeatability / cached behaviour)
     reg, R_rs_mod, Rg = model.fit_LtEs(
-    wl, Li/Es, Lt/Es, params, weights, geom, anc=(am, rh, pressure)
+        wl, Li / Es, Lt / Es, params, weights, geom, anc=(am, rh, pressure)
     )
-    
+
     # Quick plotting of measured vs modelled quantities
-    plt.figure(); plt.grid(True)
-    plt.plot(wl, Lt/Es, label='L_t/E_s measured');
-    plt.plot(wl, R_rs_mod + Rg, label='L_t/E_s modelled'); plt.plot(wl, R_rs_mod, label='Modelled R_rs');
-    plt.plot(wl, Rg, label='R_g'); plt.plot(wl, Lt/Es-Rg, label='R_rs 3C');
-    plt.xlabel('wavelength (nm)'); plt.ylabel('Various reflectances (sr^(-1))'); plt.legend(); plt.tight_layout(); plt.show()
+    plt.figure()
+    plt.grid(True)
+    plt.plot(wl, Lt / Es, label="L_t/E_s measured")
+    plt.plot(wl, R_rs_mod + Rg, label="L_t/E_s modelled")
+    plt.plot(wl, R_rs_mod, label="Modelled R_rs")
+    plt.plot(wl, Rg, label="R_g")
+    plt.plot(wl, Lt / Es - Rg, label="R_rs 3C")
+    plt.xlabel("wavelength (nm)")
+    plt.ylabel("Various reflectances (sr^(-1))")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
     """
     # --- plot component IOPs (6 panels) using optimized parameters ---
     # ensure canonical wl (same used by model caches)
