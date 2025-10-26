@@ -35,10 +35,11 @@ License: GPL-3.0 (inherit from project)
 Author: Jaime Pitarch (refactor for repository)
 """
 
-import warnings
 import hashlib
 import os
+import warnings
 from collections import OrderedDict
+
 import lmfit as lm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,7 +54,6 @@ warnings.filterwarnings(
     category=UserWarning,
     module="uncertainties.core",
 )
-
 
 
 # ---------------------------------------------------------------------------
