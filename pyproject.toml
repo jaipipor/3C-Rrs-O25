@@ -2,8 +2,20 @@
 requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 88
+[project]
+name = "rrs3c"
+version = "0.1.0"
+description = "Analytical 3C Remote Sensing Reflectance (Rrs) model — O25 variant."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Jaime Pitarch", email = "jaime.pitarch@cnr.it" }
+]
+license = { text = "GPL-3.0-or-later" }
 
-[tool.ruff]
-line-length = 88
+[project.urls]
+"Repository" = "https://github.com/jaipipor/3C-Rrs-O25"
+
+# [project.dependencies]
+# numpy = ">=1.24"
+# pandas = "*"
