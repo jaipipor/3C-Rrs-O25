@@ -44,8 +44,7 @@ except Exception:
 
 # try the exact model module you used; if not present try packaged import
 try:
-    from rrs_model_3C_numpy_O25_v10 import \
-        rrs_model_3C  # original working module name
+    from model import rrs_model_3C  # original working module name
 except Exception:
     try:
         from rrs3c.model import rrs_model_3C  # fallback if installed/packaged
