@@ -274,8 +274,6 @@ This code implements research in progress. When publishing results obtained with
 
 > Pitarch, (in prep.) — A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code.
 
-Replace with the final reference when published.
-
 ---
 
 ## 9. Contact & support
