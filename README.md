@@ -5,7 +5,7 @@ This repository contains an optimized NumPy implementation of the 3C Rrs model, 
 
 ---
 
-## Repository layout
+## Repository layout 📁
 
 ```
 3C-Rrs-O25/
@@ -40,7 +40,7 @@ Both are shown below for Windows, Linux and macOS.
 
 ---
 
-## 1. Create and activate a virtual environment
+## 1. Create and activate a virtual environment 🚀
 
 ### Windows (PowerShell)
 
@@ -65,7 +65,7 @@ Or run the setup script with bypass:
 powershell -ExecutionPolicy Bypass -File .\tools\setup_project.ps1
 ```
 
-### Linux / macOS (bash / zsh)
+### Linux 🐧 / macOS 🍎 (bash / zsh)
 
 ```bash
 # from the repository root
@@ -79,11 +79,11 @@ python -m pip install -r requirements.txt
 
 ---
 
-## 2A. Quickstart — run without installing (recommended for quick tests)
+## 2A. Quickstart — run without installing (recommended for quick tests) ⚡
 
 This workflow keeps the repository self-contained. It requires the venv from above.
 
-### Windows PowerShell
+### Windows PowerShell 🪟
 
 ```powershell
 & .\.venv\Scripts\Activate.ps1
@@ -97,7 +97,7 @@ jupyter lab
 python examples\run_timeseries.py --input-folder data --input-file example_time_series_data.csv --output-folder examples --date 20200530 --plot
 ```
 
-### Linux / macOS
+### Linux 🐧 / macOS 🍎
 
 ```bash
 . .venv/bin/activate
@@ -115,7 +115,7 @@ python examples/run_timeseries.py --input-folder data --input-file example_time_
 
 ---
 
-## 2B. Editable install (recommended for development)
+## 2B. Editable install (recommended for development)🧰
 
 If you will modify `src/` and want the package importable as `rrs3c`:
 
@@ -139,7 +139,7 @@ python -c "from rrs3c.model import rrs_model_3C; print('rrs3c import OK')"
 
 ---
 
-## 3. Jupyter notebooks
+## 3. Jupyter notebooks📓
 
 * Open the notebooks found in `notebooks/` with Jupyter Lab/Notebook.
 * If the kernel cannot import `rrs3c`, run the first notebook cell that inserts the repo `src/` directory into `sys.path`. This cell walks up parent directories and finds `src/rrs3c`; it is safe and included in the provided notebooks.
@@ -155,7 +155,7 @@ Select the `3C-Rrs-O25 (.venv)` kernel in the notebook UI.
 
 ---
 
-## 4. Example script usage
+## 4. Example script usage💡
 
 From the repository root (with venv active):
 
@@ -178,7 +178,7 @@ Common options:
 
 ---
 
-## 5. Troubleshooting — common issues
+## 5. Troubleshooting — common issues 🧐
 
 ### `ModuleNotFoundError: No module named 'rrs3c'`
 
@@ -227,9 +227,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup_project.ps1
 
 ---
 
----
-
-## 6. Contribution workflow
+## 6. Contribution workflow 🤝
 
 1. Fork repository → create a feature branch.
 2. Implement changes, run `pre-commit run --all-files` and `pytest`.
@@ -244,15 +242,8 @@ Suggested commit messages:
 
 ---
 
-## 7. Citation / Acknowledgement
 
-This code implements research in progress. When publishing results obtained with this code, please cite the peer-reviewed paper when available. Current placeholder citation:
-
-> Jaime Pitarch (submitted), A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code.
-
----
-
-## 8. Contact & support
+## 7. Contact & support 📨
 
 If you encounter reproducible errors:
 
@@ -261,13 +252,20 @@ If you encounter reproducible errors:
 3. Open an issue on GitHub with that information.
 
 ---
-## 9. Developer notes
+## 8. Developer notes 🛠️
 
 If you want to contribute, run tests, or edit the code, read `DEVELOPMENT.md` (at the repository root).
 It explains how to create a virtual environment, install the package in editable mode, run pre-commit hooks (black/isort/ruff), and run the test suite.
 
 ---
-## 10. License
+## 9. Citation / Acknowledgement 📜
+
+This code implements research in progress. When publishing results obtained with this code, please cite the peer-reviewed paper when available. Current placeholder citation:
+
+> Jaime Pitarch (submitted), A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code.
+
+---
+## 10. License ©️
 
 See the repository `LICENSE` file for licensing terms (BSD-3-Clause or as included).
 
