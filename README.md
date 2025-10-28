@@ -261,13 +261,13 @@ If you encounter reproducible errors:
 3. Open an issue on GitHub with that information.
 
 ---
-## 10. Developer notes
+## 9. Developer notes
 
 If you want to contribute, run tests, or edit the code, read `DEVELOPMENT.md` (at the repository root).
 It explains how to create a virtual environment, install the package in editable mode, run pre-commit hooks (black/isort/ruff), and run the test suite.
 
 ---
-## 11. License
+## 10. License
 
 See the repository `LICENSE` file for licensing terms (BSD-3-Clause or as included).
 
