@@ -267,6 +267,6 @@ This code implements research in progress. When publishing results obtained with
 ---
 ## 10. License ©️
 
-See the repository `LICENSE` file for licensing terms (BSD-3-Clause or as included).
+See the repository `LICENSE` file for licensing terms.
 
 ---
