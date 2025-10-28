@@ -266,8 +266,6 @@ If you encounter reproducible errors:
 If you want to contribute, run tests, or edit the code, read `DEVELOPMENT.md` (at the repository root).
 It explains how to create a virtual environment, install the package in editable mode, run pre-commit hooks (black/isort/ruff), and run the test suite.
 
-For high-level contribution guidance (pull requests, issue templates), see `CONTRIBUTING.md` (if present).
-
 ---
 ## 11. License
 
