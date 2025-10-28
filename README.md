@@ -5,7 +5,7 @@ This repository contains an optimized NumPy implementation of the 3C Rrs model, 
 
 ---
 
-## Repository layout (recommended)
+## Repository layout
 
 ```
 3C-Rrs-O25/
@@ -178,31 +178,7 @@ Common options:
 
 ---
 
-## 5. Tests and pre-commit hooks (black, ruff, isort)
-
-This repository uses `pre-commit` hooks to enforce style and formatting.
-
-### Install & enable hooks
-
-```bash
-# with venv active
-python -m pip install pre-commit
-pre-commit install
-pre-commit run --all-files
-```
-
-If a hook modifies files (e.g. `black` reformats code), the hook run will report modified files. Review those modifications, `git add` them and re-run the commit. Example workflow:
-
-```bash
-git add path/to/modified_file.py
-git commit -m "style: apply black fixes"
-```
-
-**If you need to bypass hooks temporarily:** `git commit --no-verify` (not recommended as a permanent practice).
-
----
-
-## 6. Troubleshooting — common issues
+## 5. Troubleshooting — common issues
 
 ### `ModuleNotFoundError: No module named 'rrs3c'`
 
@@ -253,7 +229,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup_project.ps1
 
 ---
 
-## 7. Contribution workflow
+## 6. Contribution workflow
 
 1. Fork repository → create a feature branch.
 2. Implement changes, run `pre-commit run --all-files` and `pytest`.
@@ -268,15 +244,15 @@ Suggested commit messages:
 
 ---
 
-## 8. Citation / Acknowledgement
+## 7. Citation / Acknowledgement
 
 This code implements research in progress. When publishing results obtained with this code, please cite the peer-reviewed paper when available. Current placeholder citation:
 
-> Pitarch, (in prep.) — A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code.
+> Jaime Pitarch (submitted), A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code.
 
 ---
 
-## 9. Contact & support
+## 8. Contact & support
 
 If you encounter reproducible errors:
 
