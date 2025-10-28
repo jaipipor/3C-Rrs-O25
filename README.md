@@ -42,7 +42,7 @@ Both are shown below for Windows, Linux and macOS.
 
 ## 1. Create and activate a virtual environment 🚀
 
-### Windows (PowerShell)
+### Windows 🪟 (PowerShell)
 
 ```powershell
 # from the repository root
@@ -83,7 +83,7 @@ python -m pip install -r requirements.txt
 
 This workflow keeps the repository self-contained. It requires the venv from above.
 
-### Windows PowerShell 🪟
+### Windows PowerShell 
 
 ```powershell
 & .\.venv\Scripts\Activate.ps1
@@ -97,7 +97,7 @@ jupyter lab
 python examples\run_timeseries.py --input-folder data --input-file example_time_series_data.csv --output-folder examples --date 20200530 --plot
 ```
 
-### Linux 🐧 / macOS 🍎
+### Linux / macOS
 
 ```bash
 . .venv/bin/activate
