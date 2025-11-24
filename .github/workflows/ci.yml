@@ -9,6 +9,19 @@ jobs:
         python-version: ['3.10', '3.11']
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+      - name: Ensure Git LFS files are present
+        run: |
+          git lfs install --local
+          git lfs pull || true
+      - name: Debug: show head of data file (first 20 lines)
+        run: |
+          echo "PWD: $(pwd)"
+          ls -l data || true
+          echo "---- head of file ----"
+          sed -n '1,20p' data/abs_scat_seawater_20d_35PSU_20230922_short.txt || true
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
