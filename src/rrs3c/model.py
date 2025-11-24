@@ -151,7 +151,7 @@ class rrs_model_3C(object):
         # wavelength axis (squeezed in case it was saved as (nw,) or (1,nw))
         self.l_int = aph_data["l_int"].squeeze()
         # 'aph_norm_55' is expected to contain the 55 templates already normalized
-        # by their value around 670 nm (i.e. my_spec / normF from the original v7).
+        # by their value around 670 nm
         # vars_aph.npz is expected to contain 'aph_norm_55' and 'aph670_bounds'. Use them directly
         self._aph_norm_55 = aph_data["aph_norm_55"]  # shape (55, nw)
         self._aph670_bounds = aph_data["aph670_bounds"].squeeze()
