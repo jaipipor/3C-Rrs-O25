@@ -79,7 +79,7 @@ class rrs_model_3C(object):
             data_folder = repo_root / "data"
 
         # store the path where auxiliary data files are expected
-        self.data_folder = data_folder
+        self.data_folder = Path(data_folder)  # convert to Path object
         # precompute water IOP file content (raw array)
         self._load_water_iops()
         # load G tables into memory (but don't create RegularGridInterpolator)
