@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "data"
 SRC_DIR = REPO_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
-
+sys.path.insert(0, str(DATA_DIR))
 # Import after sys.path modification (intentional); silence E402 linter rule.
 from rrs3c.model import rrs_model_3C  # noqa: E402
 
