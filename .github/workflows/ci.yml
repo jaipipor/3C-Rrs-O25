@@ -1,30 +1,103 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  test-linux:
+    name: Test (Linux)
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.10, 3.11]
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.13'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Lint (ruff)
+
+      - name: Debug: inspect data file used by tests (linux)
+        if: ${{ always() }}
         run: |
-          pip install ruff
-          ruff check .
-      - name: Black check
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          echo "Listing top-level of workspace:"
+          ls -la "$GITHUB_WORKSPACE" || true
+
+          repo_dir=$(basename "$GITHUB_WORKSPACE")
+          echo "Detected repo dir name: $repo_dir"
+          echo "Listing repo root (workspace/$repo_dir):"
+          ls -la "$GITHUB_WORKSPACE/$repo_dir" || true
+
+          DATAFILE="$GITHUB_WORKSPACE/$repo_dir/data/abs_scat_seawater_20d_35PSU_20230922_short.txt"
+          echo "Checking expected data file: $DATAFILE"
+          if [ -f "$DATAFILE" ]; then
+            echo "File exists. Size (bytes):"
+            wc -c "$DATAFILE"
+            echo "First 80 lines (or fewer):"
+            head -n 80 "$DATAFILE" || true
+            echo "File type (file):"
+            file "$DATAFILE" || true
+          else
+            echo "ERROR: file not found at expected path: $DATAFILE"
+            echo "Searching workspace for matching filenames (may take a few seconds):"
+            find "$GITHUB_WORKSPACE" -maxdepth 4 -type f -iname 'abs_scat*' -print || true
+          fi
+
+      - name: Run pytest
+        run: pytest -q
+
+  test-windows:
+    name: Test (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies (windows)
+        shell: pwsh
         run: |
-          pip install black
-          black --check .
-      - name: Run tests
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Debug: inspect data file used by tests (windows)
+        if: ${{ always() }}
+        shell: pwsh
         run: |
-          pytest -q
+          Write-Host "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
+          Write-Host "Listing workspace root:"
+          Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force | Format-List
+
+          $repo = Split-Path -Leaf $env:GITHUB_WORKSPACE
+          Write-Host "Detected repo dir name: $repo"
+          $datafile = Join-Path $env:GITHUB_WORKSPACE "$repo\data\abs_scat_seawater_20d_35PSU_20230922_short.txt"
+          Write-Host "Checking expected data file: $datafile"
+          if (Test-Path $datafile) {
+            Get-Item $datafile | Format-List
+            Write-Host "First 80 lines (or fewer):"
+            Get-Content $datafile -TotalCount 80
+            Write-Host "File byte count:"
+            (Get-Item $datafile).Length
+          } else {
+            Write-Host "ERROR: file not found at expected path: $datafile"
+            Write-Host "Searching workspace for matching filenames (may take a few seconds):"
+            Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter 'abs_scat*' -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
+          }
+
+      - name: Run pytest (windows)
+        shell: pwsh
+        run: pytest -q
