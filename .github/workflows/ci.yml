@@ -31,28 +31,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: |
-          Write-Host "GITHUB_WORKSPACE: $env:GITHUB_WORKSPACE"
-          Write-Host "Listing workspace root:"
-          Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force | Format-List
-
-          $repo = Split-Path -Leaf $env:GITHUB_WORKSPACE
-          Write-Host "Detected repo dir name: $repo"
-          $datafile = Join-Path $env:GITHUB_WORKSPACE "$repo\data\abs_scat_seawater_20d_35PSU_20230922_short.txt"
-          Write-Host "Checking expected data file: $datafile"
-          if (Test-Path $datafile) {
-            Get-Item $datafile | Format-List
-            Write-Host "First 80 lines (or fewer):"
-            Get-Content $datafile -TotalCount 80
-            Write-Host "File byte count:"
-            (Get-Item $datafile).Length
-          } else {
-            Write-Host "ERROR: file not found at expected path: $datafile"
-            Write-Host "Searching workspace for matching filenames (may take a few seconds):"
-            Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter 'abs_scat*' -Recurse -ErrorAction SilentlyContinue | Select-Object FullName,Length
-          }
-
       - name: Run pytest (windows)
         shell: pwsh
         run: pytest -q
