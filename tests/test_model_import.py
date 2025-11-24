@@ -12,6 +12,7 @@ from pathlib import Path
 
 # Ensure repo/src is on sys.path for tests run from repo root
 REPO_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = REPO_ROOT / "data"
 SRC_DIR = REPO_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
@@ -21,6 +22,6 @@ from rrs3c.model import rrs_model_3C  # noqa: E402
 
 def test_model_import():
     """Construct the model and check it exposes the expected API."""
-    data_folder = str(SRC_DIR)  # use src/ as a simple data-folder placeholder in tests
+    data_folder = str(DATA_DIR)  # use src/ as a simple data-folder placeholder in tests
     model = rrs_model_3C(data_folder=data_folder)
     assert hasattr(model, "fit_LtEs")
