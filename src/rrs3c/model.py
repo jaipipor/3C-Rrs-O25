@@ -1,5 +1,5 @@
 """
-model.py
+rrs_model_3C_O25.py
 
 Optimized analytical 3C remote-sensing reflectance (Rrs) model.
 
@@ -39,7 +39,6 @@ import hashlib
 import os
 import warnings
 from collections import OrderedDict
-from pathlib import Path
 
 import lmfit as lm
 import matplotlib.pyplot as plt
@@ -72,20 +71,25 @@ class rrs_model_3C(object):
       `fit_LtEs(...)` which performs a fit of measured Lt/Es using lmfit.
     """
 
-    def __init__(self, data_folder=None):
-
-        if data_folder is None or not os.path.isdir(data_folder):
-            repo_root = Path(__file__).parent.parent.parent
-            data_folder = repo_root / "data"
-
+    def __init__(self, data_folder="C:/Users/Jaime/Documents/3C_Python/Data"):
         # store the path where auxiliary data files are expected
         self.data_folder = data_folder
+        # --- load aph templates (provided externally) ---
+        path = os.path.join(self.data_folder, "vars_aph_v2.npz")
+        aph_data = np.load(path)
+        # wavelength axis (squeezed in case it was saved as (nw,) or (1,nw))
+        self.l_int = aph_data["l_int"].squeeze()
+        # 'aph_norm_55' is expected to contain the 55 templates already normalized
+        # by their value around 670 nm (i.e. my_spec / normF from the original v7).
+        # vars_aph.npz is expected to contain 'aph_norm_55' and 'aph670_bounds'. Use them directly
+        self._aph_norm_55 = aph_data["aph_norm_55"]  # shape (55, nw)
+        self._aph670_bounds = aph_data["aph670_bounds"].squeeze()
+
         # precompute water IOP file content (raw array)
         self._load_water_iops()
+
         # load G tables into memory (but don't create RegularGridInterpolator)
         self._load_G_tables()
-        # load aph LUT
-        self._load_aph()
 
         # caches for per-wavelength computations (LRU)
         # _wl_cache: maps a hash of the wl bytes -> (aw, bbw) for that wl grid
@@ -102,24 +106,23 @@ class rrs_model_3C(object):
         # Load water absorption (aw) and pure-water backscatter (bbw) table.
         # Filename is historical; the file is expected to have three columns:
         # wavelength, aw, bbw and some header lines (skipped with skiprows=8).
-        water_IOPs_pathfilename = (
-            self.data_folder / "abs_scat_seawater_20d_35PSU_20230922_short.txt"
-        )
-        # aw: WOPP v3. bbw: Zhang 2009
-        raw = np.loadtxt(water_IOPs_pathfilename, skiprows=8)
+        data_path = os.path.join(
+            self.data_folder, "abs_scat_seawater_20d_35PSU_20230922_short.txt"
+        )  # aw: WOPP v3. bbw: Zhang 2009
+        raw = np.loadtxt(data_path, skiprows=8)
         # if file had extra trailing row handling in original code
         raw = raw[:-1] if raw.shape[1] >= 3 else raw
         # store the raw table for interpolation in the forward model
-        self.lw_aw_bw = raw  # columns: wavelength, aw, bbw
+        self.lw_aw_bbw = raw  # columns: wavelength, aw, bbw
 
     def _load_G_tables(self):
-        # The G coefficients are stored in text files.
-        # Reshape transpose them to match axes order expected by the evaluator.
+        # G-function grids are stored in text files. The original code used a
+        # reshape/transposition to match axes order expected by the evaluator.
         az = np.arange(0, 181, 15)
         tv = np.concatenate([np.arange(0, 81, 10), [87.5]])
         ts = tv.copy()
 
-        # helper to load and reshape
+        # helper to load and reshape exactly as original code
         def ld3(fname):
             path = os.path.join(self.data_folder, fname)
             m = np.loadtxt(path)
@@ -144,18 +147,6 @@ class rrs_model_3C(object):
         self._G_i2 = RegularGridInterpolator((ts, tv, az), self._G0p)
         self._G_i3 = RegularGridInterpolator((ts, tv, az), self._G1p)
 
-    def _load_aph(self):
-        # --- load aph templates  ---
-        aph_pathfilename = self.data_folder / "vars_aph_v2.npz"
-        aph_data = np.load(aph_pathfilename)
-        # wavelength axis (squeezed in case it was saved as (nw,) or (1,nw))
-        self.l_int = aph_data["l_int"].squeeze()
-        # 'aph_norm_55' is expected to contain the 55 templates already normalized
-        # by their value around 670 nm (i.e. my_spec / normF from the original v7).
-        # vars_aph.npz is expected to contain 'aph_norm_55' and 'aph670_bounds'. Use them directly
-        self._aph_norm_55 = aph_data["aph_norm_55"]  # shape (55, nw)
-        self._aph670_bounds = aph_data["aph670_bounds"].squeeze()
-
     def _G_eval(self, s, v, a):
         """Evaluate G-functions using the prebuilt RegularGridInterpolator objects.
 
@@ -169,7 +160,7 @@ class rrs_model_3C(object):
         -------
         (G0w, G1w, G0p, G1p) : tuple of floats evaluated at the given geometry
         """
-        # ensure absolute positive value for azimuth
+        # ensure absolute azimuth matching how tables were constructed
         a = abs(float(a))
         pt = (float(s), float(v), a)
         # use the interpolator objects created in _load_G_tables
@@ -182,7 +173,7 @@ class rrs_model_3C(object):
 
     def model_3C(self):
         # cache references locally for speed (these variables are closed over by f)
-        # lw_aw_bw = None  # will be loaded inside f to ensure up-to-date
+        # lw_aw_bbw = None  # will be loaded inside f to ensure up-to-date
         l_int = self.l_int
         aph670_bounds = self._aph670_bounds
         aph_norm_55 = self._aph_norm_55
@@ -191,7 +182,7 @@ class rrs_model_3C(object):
         # execute the inner implementation without attribute lookups on the class.
         def f(wl, beta, alpha, C, N, Y, SNAP, Sg, geom, anc, LiEs, rho, rho_d, rho_s):
             # short local refs avoid repeated attribute lookup
-            lw_aw_bw = self.lw_aw_bw
+            lw_aw_bbw = self.lw_aw_bbw
             G_eval = self._G_eval
             preG = getattr(self, "_G_precomputed", None)
 
@@ -200,7 +191,7 @@ class rrs_model_3C(object):
             (theta_s, theta_v, phi) = geom
             cosths = np.cos(np.deg2rad(theta_s))
 
-            # Atmospheric partition (Gregg and Carder 1990)
+            # Atmospheric partition (identical to original)
             z3 = -0.1417 * alpha + 0.82
             z2 = 0.65 if alpha > 1.2 else z3
             z1 = 0.82 if alpha < 0 else z2
@@ -220,7 +211,7 @@ class rrs_model_3C(object):
             # aerosol transmittance term (Tas)
             Tas = np.exp(-omega_a * tau_a * M)
             Esd = Tr * Tas
-            # Ess term accounts for the scattered skylight partition
+            # ESS term accounts for the scattered skylight partition
             Ess = 0.5 * (1 - Tr**0.95) + Tr**1.5 * (1 - Tas) * Fa
             EsdEs = Esd / (Esd + Ess)
             EssEs = 1 - EsdEs
@@ -229,13 +220,14 @@ class rrs_model_3C(object):
             # partitioned atmospheric terms weighted by rho coefficients
             Rg = rho * LiEs + rho_d * EsdEs / np.pi + rho_s * EssEs / np.pi
 
-            # Create a hash key for the current wavelength grid
+            # Bio-optical Rrs
+            # compute or fetch aw and bbw for this wavelength grid from cache
             wl_key = hashlib.sha1(wl.tobytes()).hexdigest()
             cached_wl = self._wl_cache.get(wl_key)
             if cached_wl is None:
                 # interpolate aw and bbw to the requested wavelength grid
-                aw = np.interp(wl, lw_aw_bw[:, 0], lw_aw_bw[:, 1])
-                bbw = np.interp(wl, lw_aw_bw[:, 0], lw_aw_bw[:, 2]) / 2.0
+                aw = np.interp(wl, lw_aw_bbw[:, 0], lw_aw_bbw[:, 1])
+                bbw = np.interp(wl, lw_aw_bbw[:, 0], lw_aw_bbw[:, 2]) / 2.0
                 # store in LRU cache (pop oldest if at capacity)
                 if len(self._wl_cache) >= self._wl_cache_max:
                     self._wl_cache.popitem(last=False)
@@ -246,6 +238,10 @@ class rrs_model_3C(object):
             # phytoplankton absorption: select template by C bin
             aph670 = 0.019092732293411 * C**0.955677209349669
             bin_idx = np.searchsorted(aph670_bounds, aph670)
+            if bin_idx < 0:
+                bin_idx = 0
+            elif bin_idx >= aph_norm_55.shape[0]:
+                bin_idx = aph_norm_55.shape[0] - 1
 
             tpl_key = f"{wl_key}:bin{bin_idx}"
             base_interp = self._aph_interp_cache.get(tpl_key)
@@ -280,11 +276,11 @@ class rrs_model_3C(object):
             )  # power law derived from PB24
             eta = 0.8624 - 0.2147 * np.log10(T) - 0.06528 * C / T  # Derived from PB24
             bbp = bbp560 * (560 / wl) ** eta
-            bb = bbw + bbp
+            bb_tot = bbw + bbp
 
-            a = aw + aph + aNAP + ag
-            omw = bbw / (a + bb)
-            omp = (bb - bbw) / (a + bb)
+            a_tot = aw + aph + aNAP + ag
+            omw = bbw / (a_tot + bb_tot)
+            omp = (bb_tot - bbw) / (a_tot + bb_tot)
 
             # use fast G eval: either reuse precomputed tuple or interpolate
             if preG is not None:
@@ -307,7 +303,7 @@ class rrs_model_3C(object):
         Notes:
         - `params` is expected to be an lmfit.Parameters instance with the
           parameter names used inside the model (beta, alpha, C, N, Y, SNAP,
-          Sg, rho, rho_d, rho_s). The code calls p.valuesdict() to obtain
+          Sg, rho, rho_d, rho_s, ...). The code calls p.valuesdict() to obtain
           numeric values for each evaluation.
         - The residual function returns a concatenated vector with a data
           residual part and a penalty part to discourage negative Rg.
@@ -356,7 +352,14 @@ class rrs_model_3C(object):
         # _G_precomputed is used by model_3C to bypass interpolator calls
         self._G_precomputed = self._G_eval(*geom)
         try:
-            out = lm.minimize(resid, params, method=method)
+            if str(method).lower() == "leastsq":
+                # scipy's leastsq doesn't accept an 'options' dict with 'disp'
+                out = lm.minimize(resid, params, method=method)
+            else:
+                out = lm.minimize(
+                    resid, params, method=method, options={"disp": verbose}
+                )
+
             # Print common attributes if present
             for attr in (
                 "message",
@@ -416,7 +419,7 @@ class rrs_model_3C(object):
                 pv["rho_s"],
             )
 
-            # --- print optimized parameters ---
+            # --- print optimized parameters (place this right after pv = out.params.valuesdict()) ---
             print("\nOptimized parameters:")
             # lmfit result: print value, stderr (if present), bounds and whether it varied
             for name, par in out.params.items():
@@ -436,11 +439,9 @@ class rrs_model_3C(object):
 if __name__ == "__main__":
     # Example / diagnostic run when the module is executed directly.
     # Adjust `data_folder` to your local path if needed.
-    repo_root = Path(__file__).parent.parent.parent
-    data_folder = repo_root / "data"
-    examples_folder = repo_root / "examples"
+    data_folder = "C:/Users/Jaime/Documents/3C_python/Data"
     data = pd.read_csv(
-        os.path.join(examples_folder, "example_single_spectrum.csv"),
+        os.path.join(data_folder, "example_data_NIOZ_jetty_2.csv"),
         index_col=0,
         skiprows=15,
     )
@@ -449,7 +450,10 @@ if __name__ == "__main__":
     Li = data.iloc[:, 0].values
     Lt = data.iloc[:, 1].values
     Es = data.iloc[:, 2].values
+    #    geom=(40.62, 40, 135) # Baltic Sea
+    #    geom=(59, 35, 6) # Jetty
     geom = (59, 35, 100)  # Jetty 2
+    #    geom=(57.56653, 35, 97.513159) # Jetty 3
     am = 4
     rh = 60
     pressure = 1013.25
@@ -503,16 +507,83 @@ if __name__ == "__main__":
         wl, Li / Es, Lt / Es, params, weights, geom, anc=(am, rh, pressure)
     )
 
-    # Quick plotting of measured vs modeled quantities
+    # Quick plotting of measured vs modelled quantities
     plt.figure()
     plt.grid(True)
-    plt.plot(wl, Lt / Es, label="L_t/E_s, measured")
-    plt.plot(wl, R_rs_mod + Rg, label="L_t/E_s, modeled")
-    plt.plot(wl, R_rs_mod, label=" R_rs, modeled")
-    plt.plot(wl, Rg, label="R_g, 3C output")
-    plt.plot(wl, Lt / Es - Rg, label="R_rs, 3C output")
+    plt.plot(wl, Lt / Es, label="L_t/E_s measured")
+    plt.plot(wl, R_rs_mod + Rg, label="L_t/E_s modelled")
+    plt.plot(wl, R_rs_mod, label="Modelled R_rs")
+    plt.plot(wl, Rg, label="R_g")
+    plt.plot(wl, Lt / Es - Rg, label="R_rs 3C")
     plt.xlabel("wavelength (nm)")
     plt.ylabel("Various reflectances (sr^(-1))")
     plt.legend()
     plt.tight_layout()
     plt.show()
+    """
+    # --- plot component IOPs (6 panels) using optimized parameters ---
+    # ensure canonical wl (same used by model caches)
+    wl_c = np.ascontiguousarray(wl, dtype=np.float64)
+    wl_key = hashlib.sha1(wl_c.tobytes()).hexdigest()
+
+    pv = reg.params.valuesdict()
+
+    # compute IOPs using the model helper (returns dict with keys used below)
+    iops = model._compute_iops(wl_c, pv['C'], pv['N'], pv['Y'], wl_key=wl_key)
+
+    # extract arrays (safety: ensure 1D numpy arrays)
+    wl_plot = np.asarray(iops['wl']).ravel()
+    aph = np.asarray(iops['aph']).ravel()
+    bbph = np.asarray(iops['bbph']).ravel()
+    aNAP = np.asarray(iops['aNAP']).ravel()
+    bbNAP = np.asarray(iops['bbNAP']).ravel()
+    ag = np.asarray(iops['ag']).ravel()
+
+    # For CDOM there's effectively no backscatter; plot a zero-line to keep layout consistent
+    bbCDOM = np.zeros_like(ag)
+
+    # Create 3x2 subplot grid
+    fig, axes = plt.subplots(3, 2, figsize=(10, 9), sharex=True)
+    fig.suptitle('Component IOPs (absorption and backscattering)')
+
+    # Row 1: Phytoplankton
+    ax = axes[0, 0]
+    ax.plot(wl_plot, aph, label='a_ph (phytoplankton)')
+    ax.set_ylabel('absorption (m$^{-1}$)')
+    ax.grid(True)
+    ax.legend()
+    ax = axes[0, 1]
+    ax.plot(wl_plot, bbph, label='bb_ph (phytoplankton)')
+    ax.set_ylabel('backscatter (m$^{-1}$)')
+    ax.grid(True)
+    ax.legend()
+
+    # Row 2: NAP
+    ax = axes[1, 0]
+    ax.plot(wl_plot, aNAP, label='a_NAP')
+    ax.set_ylabel('absorption (m$^{-1}$)')
+    ax.grid(True)
+    ax.legend()
+    ax = axes[1, 1]
+    ax.plot(wl_plot, bbNAP, label='bb_NAP')
+    ax.set_ylabel('backscatter (m$^{-1}$)')
+    ax.grid(True)
+    ax.legend()
+
+    # Row 3: CDOM (absorption) and placeholder backscatter
+    ax = axes[2, 0]
+    ax.plot(wl_plot, ag, label='a_g (CDOM)')
+    ax.set_xlabel('wavelength (nm)')
+    ax.set_ylabel('absorption (m$^{-1}$)')
+    ax.grid(True)
+    ax.legend()
+    ax = axes[2, 1]
+    ax.plot(wl_plot, bbph + bbNAP, label='bb_p ')
+    ax.set_xlabel('wavelength (nm)')
+    ax.set_ylabel('backscatter (m$^{-1}$)')
+    ax.grid(True)
+    ax.legend()
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.96])
+    plt.show()
+    """

@@ -157,7 +157,7 @@ def main() -> None:
     res_west_list = [None] * N
 
     # Build 3C model instance
-    model = rrs_model_3C()
+    model = rrs_model_3C()  # use default data_folder or override as needed
 
     start_time = time.time()
     # Loop over unique time bins
