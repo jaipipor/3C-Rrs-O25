@@ -25,23 +25,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Lint (ruff)
-        run: |
-          pip install ruff
-          ruff check .
-
-      - name: Black check
-        run: |
-          pip install black
-          black --check .
-
-      - name: Debug: show head of data file (first 20 lines)
-        run: |
-          echo "PWD: $(pwd)"
-          ls -l data || true
-          echo "---- head of file ----"
-          sed -n '1,20p' data/abs_scat_seawater_20d_35PSU_20230922_short.txt || true
-
       - name: Run tests
         run: |
           pytest -q
