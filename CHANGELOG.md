@@ -33,6 +33,13 @@ Initial public release.
 
 ### Removed
 - A few unnecessary defensive conditions here and there in model.py
+
+## [0.2.0] - 2025-11-24
+Minor build/test fixes.
+
+### Fixed
+- Fixed the /tests/test_model_import.py code for proper build and import
+
 ---
 
 <!--
