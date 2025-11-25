@@ -37,6 +37,9 @@ Initial public release.
 ## [0.2.0] - 2025-11-24
 Minor build/test fixes.
 
+### Changed
+- Usage of "Path" objects instead of strings
+
 ### Fixed
 - Fixed the /tests/test_model_import.py code for proper build and import
 
