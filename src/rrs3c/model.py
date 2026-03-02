@@ -189,7 +189,23 @@ class rrs_model_3C(object):
 
         # The forward model is returned as a callable `f` so that repeated calls
         # execute the inner implementation without attribute lookups on the class.
-        def f(wl, beta, alpha, C, N, Y, SNAP, Sg, geom, anc, LiEs, rho, rho_d, rho_s):
+        def f(
+            wl,
+            beta,
+            alpha,
+            C,
+            N,
+            Y,
+            SNAP,
+            Sg,
+            geom,
+            anc,
+            LiEs,
+            rho,
+            rho_d,
+            rho_r,
+            rho_a,
+        ):
             # short local refs avoid repeated attribute lookup
             lw_aw_bw = self.lw_aw_bw
             G_eval = self._G_eval
@@ -221,13 +237,20 @@ class rrs_model_3C(object):
             Tas = np.exp(-omega_a * tau_a * M)
             Esd = Tr * Tas
             # Ess term accounts for the scattered skylight partition
-            Ess = 0.5 * (1 - Tr**0.95) + Tr**1.5 * (1 - Tas) * Fa
-            EsdEs = Esd / (Esd + Ess)
-            EssEs = 1 - EsdEs
+            Esr = 0.5 * (1 - Tr**0.95)
+            Esa = Tr**1.5 * (1 - Tas) * Fa
+            EsdEs = Esd / (Esd + Esr + Esa)
+            EsrEs = Esr / (Esd + Esr + Esa)
+            EsaEs = 1 - EsdEs - EsrEs
 
             # Surface reflection Rg: combination of instrument sky term and
             # partitioned atmospheric terms weighted by rho coefficients
-            Rg = rho * LiEs + rho_d * EsdEs / np.pi + rho_s * EssEs / np.pi
+            Rg = (
+                rho * LiEs
+                + rho_d * EsdEs / np.pi
+                + rho_r * EsrEs / np.pi
+                + rho_a * EsaEs / np.pi
+            )
 
             # Create a hash key for the current wavelength grid
             wl_key = hashlib.sha1(wl.tobytes()).hexdigest()
@@ -307,7 +330,7 @@ class rrs_model_3C(object):
         Notes:
         - `params` is expected to be an lmfit.Parameters instance with the
           parameter names used inside the model (beta, alpha, C, N, Y, SNAP,
-          Sg, rho, rho_d, rho_s). The code calls p.valuesdict() to obtain
+          Sg, rho, rho_d, rho_r, rho_a). The code calls p.valuesdict() to obtain
           numeric values for each evaluation.
         - The residual function returns a concatenated vector with a data
           residual part and a penalty part to discourage negative Rg.
@@ -336,7 +359,8 @@ class rrs_model_3C(object):
                 LiEs,
                 pv["rho"],
                 pv["rho_d"],
-                pv["rho_s"],
+                pv["rho_r"],
+                pv["rho_a"],
             )
             # return vector residuals scaled by sqrt(weights) so least-squares objective
             # equals sum(weights * (LtEs - Rrs_mod - Rg)**2)
@@ -413,7 +437,8 @@ class rrs_model_3C(object):
                 LiEs,
                 pv["rho"],
                 pv["rho_d"],
-                pv["rho_s"],
+                pv["rho_r"],
+                pv["rho_a"],
             )
 
             # --- print optimized parameters ---
@@ -463,7 +488,8 @@ if __name__ == "__main__":
         ("Sg", 0.015, True, 0.005, 0.03, None),
         ("rho", 0.02, False, 0, 0.03, None),
         ("rho_d", 0.0, True, 0, 10, None),
-        ("rho_s", 0.0, True, -0.01, 0.01, None),
+        ("rho_r", 0.0, True, -0.01, 0.01, None),
+        ("rho_a", 0.0, True, -0.1, 0.1, None),
         ("alpha", 0.2, True, 0, 2, None),
         ("beta", 0.05, True, 0, 1, None),
     )

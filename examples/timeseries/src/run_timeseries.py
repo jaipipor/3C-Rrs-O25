@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--input-file",
-        default="example_time_series_data.csv",
+        default="example_time_series_data_long.csv",
         help="CSV file name (default: example_time_series_data.csv next to this script).",
     )
     p.add_argument(
@@ -145,10 +145,12 @@ def main() -> None:
     resid550_west = np.full(N, np.nan)
     rho_east = np.full(N, np.nan)
     rho_d_east = np.full(N, np.nan)
-    rho_s_east = np.full(N, np.nan)
+    rho_r_east = np.full(N, np.nan)
+    rho_a_east = np.full(N, np.nan)
     rho_west = np.full(N, np.nan)
     rho_d_west = np.full(N, np.nan)
-    rho_s_west = np.full(N, np.nan)
+    rho_r_west = np.full(N, np.nan)
+    rho_a_west = np.full(N, np.nan)
     Rg550_east = np.full(N, np.nan)
     Rg550_west = np.full(N, np.nan)
 
@@ -216,7 +218,8 @@ def main() -> None:
                         ("Sg", 0.015, True, 0.005, 0.03, None),
                         ("rho", 0.02, True, 0, 0.03, None),
                         ("rho_d", 0.0, True, 0, 10, None),
-                        ("rho_s", 0.01, True, -0.1, 0.1, None),
+                        ("rho_r", 0.01, True, -0.1, 0.1, None),
+                        ("rho_a", 0.01, True, -0.1, 0.1, None),
                         ("delta", 0.0, False, -0.01, 0.01, None),
                         ("alpha", 0.2, True, 0, 2, None),
                         ("beta", 0.05, True, 0, 1, None),
@@ -271,7 +274,8 @@ def main() -> None:
                         try:
                             rho_east[i] = res.params["rho"].value
                             rho_d_east[i] = res.params["rho_d"].value
-                            rho_s_east[i] = res.params["rho_s"].value
+                            rho_r_east[i] = res.params["rho_r"].value
+                            rho_a_east[i] = res.params["rho_a"].value
                         except Exception:
                             pass
 
@@ -292,7 +296,8 @@ def main() -> None:
                         try:
                             rho_west[i] = res.params["rho"].value
                             rho_d_west[i] = res.params["rho_d"].value
-                            rho_s_west[i] = res.params["rho_s"].value
+                            rho_r_west[i] = res.params["rho_r"].value
+                            rho_a_west[i] = res.params["rho_a"].value
                         except Exception:
                             pass
 
