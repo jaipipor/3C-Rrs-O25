@@ -50,7 +50,7 @@ else:
     # (we don't raise here to keep the script usable in unusual setups)
     pass
 
-from rrs3c.model import rrs_model_3C  # noqa: E402
+from rrs3c.model import rrs_model_3C_O25  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ def main() -> None:
     res_west_list = [None] * N
 
     # Build 3C model instance
-    model = rrs_model_3C()
+    model = rrs_model_3C_O25()
 
     start_time = time.time()
     # Loop over unique time bins

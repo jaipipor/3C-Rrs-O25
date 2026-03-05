@@ -60,15 +60,15 @@ warnings.filterwarnings(
 # ---------------------------------------------------------------------------
 # Core model class
 # ---------------------------------------------------------------------------
-class rrs_model_3C(object):
-    """Class implementing the optimized 3C Rrs forward model and fitting.
+class rrs_model_3C_O25(object):
+    """Class implementing the optimized 3C-O25 Rrs forward model and fitting.
 
     Notes:
     - The constructor loads auxiliary files (aph templates, water IOPs, G-tables)
       from `data_folder` and prepares small LRU caches used by the forward
       model to avoid repeated interpolation work when the same wavelength
       grids are evaluated repeatedly.
-    - The public methods are `model_3C()` (returns the forward callable) and
+    - The public methods are `model_3C_O25()` (returns the forward callable) and
       `fit_LtEs(...)` which performs a fit of measured Lt/Es using lmfit.
     """
 
@@ -96,7 +96,7 @@ class rrs_model_3C(object):
         self._aph_interp_cache_max = 64
 
         # keep the compiled model function (callable) for fast repeated use
-        self.model = self.model_3C()
+        self.model = self.model_3C_O25()
 
     def _load_water_iops(self):
         # Load water absorption (aw) and pure-water backscatter (bbw) table.
@@ -180,7 +180,7 @@ class rrs_model_3C(object):
             float(self._G_i3(pt)),
         )
 
-    def model_3C(self):
+    def model_3C_O25(self):
         # cache references locally for speed (these variables are closed over by f)
         # lw_aw_bw = None  # will be loaded inside f to ensure up-to-date
         l_int = self.l_int
@@ -453,7 +453,7 @@ if __name__ == "__main__":
     am = 4
     rh = 60
     pressure = 1013.25
-    model = rrs_model_3C(data_folder=data_folder)
+    model = rrs_model_3C_O25(data_folder=data_folder)
     params = lm.Parameters()
     params.add_many(
         ("C", 5, True, 0.1, 50, None),

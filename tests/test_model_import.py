@@ -17,11 +17,11 @@ SRC_DIR = REPO_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 sys.path.insert(0, str(DATA_DIR))
 # Import after sys.path modification (intentional); silence E402 linter rule.
-from rrs3c.model import rrs_model_3C  # noqa: E402
+from rrs3c.model import rrs_model_3C_O25  # noqa: E402
 
 
 def test_model_import():
     """Construct the model and check it exposes the expected API."""
     data_folder = str(DATA_DIR)  # use src/ as a simple data-folder placeholder in tests
-    model = rrs_model_3C(data_folder=data_folder)
+    model = rrs_model_3C_O25(data_folder=data_folder)
     assert hasattr(model, "fit_LtEs")
