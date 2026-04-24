@@ -3,6 +3,10 @@
 Analytical 3-component remote sensing reflectance (Rrs) model — O25 variant.
 This repository contains an optimized NumPy implementation of the 3C Rrs model, small example scripts, Jupyter notebooks, and a tiny demo dataset so users can run and test the code quickly.
 
+Reference paper:
+
+Pitarch, J. A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code. Earth Sci Inform 19, 78 (2026). https://doi.org/10.1007/s12145-026-02114-w
+
 ---
 
 ## Repository layout 📁
