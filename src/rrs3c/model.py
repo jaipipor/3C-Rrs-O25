@@ -561,13 +561,9 @@ if __name__ == "__main__":
     )
 
     # weights: remove H2O band, downweight UV, upweight NIR
-    weights = np.where(
-        (wl >= 760) & (wl <= 765),
-        0,  # Remove the ugly H2O feature
-        np.where(
-            wl < 400, 1, np.where(wl > 800, 5, 1)  # Some potential troubles at the UV
-        ),
-    )  # Let's power-up the NIR
+    weights = np.ones_like(wl, dtype=float)
+    weights[(wl >= 760) & (wl <= 765)] = 0.0  # Remove the H2O feature
+    weights[wl > 800] = 2.0  # Upweight the NIR
 
     # optional profiling block to inspect performance
     import cProfile

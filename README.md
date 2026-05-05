@@ -1,7 +1,21 @@
 # 3C-Rrs-O25 — Analytical 3-component Rrs model (O25 variant)
 
-Analytical 3-component remote sensing reflectance (Rrs) model — O25 variant.
+This repository provides a Python implementation of the **3C-O25** model for fitting measured `Lt/Es` spectra and separating the remote-sensing reflectance (`Rrs`) from the modeled surface reflection term (`Rg`).
+
 This repository contains an optimized NumPy implementation of the 3C Rrs model, small example scripts, Jupyter notebooks, and a tiny demo dataset so users can run and test the code quickly.
+
+The core model is implemented in `src/rrs3c/model.py`, and a simple command-line runner is provided in `scripts/run_3c.py`.
+
+---
+
+## Features
+
+- Analytical **3C-O25** forward model for `Lt/Es`
+- `lmfit`-based inversion through `fit_LtEs(...)`
+- Auxiliary lookup-table loading from a configurable `data/` folder
+- Small **LRU caches** to speed up repeated fits on the same wavelength grids
+- Command-line runner for single-spectrum execution
+- Optional parameter overrides from a JSON file
 
 ---
 
@@ -17,6 +31,8 @@ This repository contains an optimized NumPy implementation of the 3C Rrs model, 
 │  ├─ 01_QuickStart_Example.ipynb
 │  ├─ 02_TimeSeries_Processing.ipynb
 │  └─ 03_Parameter_Analysis.ipynb
+├─ params/            # Example JSON parameter files for the CLI runner
+├─ scripts/           # Command-line runner(s)
 ├─ src/
 │  └─ rrs3c/
 │     └─ model.py            # core model implementation
@@ -26,6 +42,14 @@ This repository contains an optimized NumPy implementation of the 3C Rrs model, 
 ├─ requirements.txt
 └─ pyproject.toml / setup.cfg
 ```
+
+---
+
+## Requirements
+
+See requirements.txt
+
+A virtual environment is recommended.
 
 ---
 
@@ -40,7 +64,44 @@ Both are shown below for Windows, Linux and macOS.
 
 ---
 
-## 1. Create and activate a virtual environment 🚀
+## Core Python API
+
+The main class is:
+
+```python
+from rrs3c.model import rrs_model_3C_O25
+```
+
+Typical usage:
+
+```python
+model = rrs_model_3C_O25(data_folder="data")
+out, Rrs_mod, Rg = model.fit_LtEs(
+    wl=wl,
+    LiEs=LiEs,
+    LtEs=LtEs,
+    params=params,
+    weights=weights,
+    geom=(theta_s, theta_v, phi),
+    anc=(am, rh, pressure),
+)
+```
+
+`fit_LtEs(...)` returns a tuple:
+
+```python
+(out, Rrs_mod, Rg)
+```
+
+where:
+
+- `out` is the `lmfit` result object
+- `Rrs_mod` is the modeled remote-sensing reflectance spectrum
+- `Rg` is the modeled surface reflection term
+
+---
+
+## Create and activate a virtual environment 🚀
 
 ### Windows 🪟 (PowerShell)
 
@@ -79,11 +140,11 @@ python -m pip install -r requirements.txt
 
 ---
 
-## 2A. Quickstart — run without installing (recommended for quick tests) ⚡
+## Quickstart — run without installing (recommended for quick tests) ⚡
 
 This workflow keeps the repository self-contained. It requires the venv from above.
 
-### Windows PowerShell 
+### Windows PowerShell
 
 ```powershell
 & .\.venv\Scripts\Activate.ps1
@@ -97,6 +158,28 @@ jupyter lab
 python examples\run_timeseries.py --input-folder data --input-file example_time_series_data.csv --output-folder examples --date 20200530 --plot
 ```
 
+Explicit input parameters can be passed to the model through the wapper run_3c.py (although for operational use, model import is adviced):
+
+From the repository root:
+
+```powershell
+& .\.venv\Scripts\python.exe .\scripts\run_3c.py `
+    --input .\examples\example_single_spectrum.csv `
+    --theta-s 59 `
+    --theta-v 35 `
+    --phi 100 `
+    --am 4 `
+    --rh 60 `
+    --pressure 1013.25 `
+    --params-file .\params\params.json
+```
+
+If you do not want a plot window to block the terminal, add:
+
+```powershell
+--no-plot
+```
+
 ### Linux / macOS
 
 ```bash
@@ -108,14 +191,9 @@ jupyter lab
 python examples/run_timeseries.py --input-folder data --input-file example_time_series_data.csv --output-folder examples --date 20200530 --plot
 ```
 
-**Notes:**
-
-* The example CLI `examples/run_timeseries.py` accepts `--input-folder`/`--input-file`/`--output-folder` options and `--plot`. Run `python examples/run_timeseries.py --help` to see available flags.
-* Notebooks include a helper first cell that attempts to find the repository root and insert `src/` into `sys.path` so `from rrs3c.model import rrs_model_3C` works even if Jupyter was started from a subfolder (e.g. `notebooks/`). If you prefer, start Jupyter from the repository root and set `PYTHONPATH` as above.
-
 ---
 
-## 2B. Editable install (recommended for development)🧰
+## Editable install (recommended for development)🧰
 
 If you will modify `src/` and want the package importable as `rrs3c`:
 
@@ -139,7 +217,7 @@ python -c "from rrs3c.model import rrs_model_3C; print('rrs3c import OK')"
 
 ---
 
-## 3. Jupyter notebooks📓
+## Jupyter notebooks📓
 
 * Open the notebooks found in `notebooks/` with Jupyter Lab/Notebook.
 * If the kernel cannot import `rrs3c`, run the first notebook cell that inserts the repo `src/` directory into `sys.path`. This cell walks up parent directories and finds `src/rrs3c`; it is safe and included in the provided notebooks.
@@ -155,7 +233,7 @@ Select the `3C-Rrs-O25 (.venv)` kernel in the notebook UI.
 
 ---
 
-## 4. Example script usage💡
+## Example script usage💡
 
 From the repository root (with venv active):
 
@@ -178,7 +256,7 @@ Common options:
 
 ---
 
-## 5. Troubleshooting — common issues 🧐
+## Troubleshooting — common issues 🧐
 
 ### `ModuleNotFoundError: No module named 'rrs3c'`
 
@@ -227,7 +305,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\setup_project.ps1
 
 ---
 
-## 6. Contribution workflow 🤝
+## Contribution workflow 🤝
 
 1. Fork repository → create a feature branch.
 2. Implement changes, run `pre-commit run --all-files` and `pytest`.
@@ -243,7 +321,7 @@ Suggested commit messages:
 ---
 
 
-## 7. Contact & support 📨
+## Contact & support 📨
 
 If you encounter reproducible errors:
 
@@ -252,20 +330,20 @@ If you encounter reproducible errors:
 3. Open an issue on GitHub with that information.
 
 ---
-## 8. Developer notes 🛠️
+## Developer notes 🛠️
 
 If you want to contribute, run tests, or edit the code, read `DEVELOPMENT.md` (at the repository root).
 It explains how to create a virtual environment, install the package in editable mode, run pre-commit hooks (black/isort/ruff), and run the test suite.
 
 ---
-## 9. Citation / Acknowledgement 📜
+## Citation / Acknowledgement 📜
 
 This code implements research in progress. When publishing results obtained with this code, please cite the peer-reviewed paper when available. Current placeholder citation:
 
 > Jaime Pitarch (submitted), A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code.
 
 ---
-## 10. License ©️
+## License ©️
 
 See the repository `LICENSE` file for licensing terms.
 
