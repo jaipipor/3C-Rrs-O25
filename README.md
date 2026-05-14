@@ -158,7 +158,7 @@ jupyter lab
 python examples\run_timeseries.py --input-folder data --input-file example_time_series_data.csv --output-folder examples --date 20200530 --plot
 ```
 
-Explicit input parameters can be passed to the model through the wapper run_3c.py (although for operational use, model import is adviced):
+Explicit input parameters can be passed to the model through the wrapper run_3c.py (although for operational use, model import is adviced):
 
 From the repository root:
 
