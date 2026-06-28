@@ -1,8 +1,6 @@
 # 3C-Rrs-O25 — Analytical 3-component Rrs model (O25 variant)
 
-This repository provides a Python implementation of the **3C-O25** model for fitting measured `Lt/Es` spectra and separating the remote-sensing reflectance (`Rrs`) from the modeled surface reflection term (`Rg`).
-
-This repository contains an optimized NumPy implementation of the 3C Rrs model, small example scripts, Jupyter notebooks, and a tiny demo dataset so users can run and test the code quickly.
+This repository provides a Python implementation of the **3C-O25** model for fitting measured `Lt/Es` spectra and separating the remote-sensing reflectance (`Rrs`) from the modeled surface reflection term (`Rg`). Small example scripts, Jupyter notebooks, and a tiny demo dataset are also provided, so users can run and test the code quickly.
 
 The core model is implemented in `src/rrs3c/model.py`, and a simple command-line runner is provided in `scripts/run_3c.py`.
 
