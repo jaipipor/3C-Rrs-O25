@@ -1,21 +1,52 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
+
 
 [project]
 name = "rrs3c"
-version = "0.1.0"
-description = "Analytical 3C Remote Sensing Reflectance (Rrs) model — O25 variant."
+version = "1.0.2"
+description = "Analytical 3C remote-sensing reflectance model, O25 variant"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
+license = "GPL-3.0-or-later"
+
 authors = [
-  { name = "Jaime Pitarch", email = "jaime.pitarch@cnr.it" }
+    { name = "Jaime Pitarch", email = "jaime.pitarch@cnr.it" },
 ]
-license = { text = "GPL-3.0-or-later" }
+
+dependencies = [
+    "numpy>=1.24",
+    "scipy",
+    "lmfit",
+]
+
+
+[project.optional-dependencies]
+cli = [
+    "pandas",
+    "matplotlib",
+]
+
+timeseries = [
+    "pandas",
+    "matplotlib",
+    "xarray",
+]
+
+dev = [
+    "build",
+    "pytest",
+    "ruff",
+    "black",
+    "pre-commit",
+]
+
 
 [project.urls]
-"Repository" = "https://github.com/jaipipor/3C-Rrs-O25"
+Repository = "https://github.com/jaipipor/3C-Rrs-O25"
+Issues = "https://github.com/jaipipor/3C-Rrs-O25/issues"
 
-# [project.dependencies]
-# numpy = ">=1.24"
-# pandas = "*"
+
+[tool.setuptools.packages.find]
+where = ["src"]
