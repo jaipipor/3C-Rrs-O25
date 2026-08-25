@@ -1,24 +1,34 @@
-# Python
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *.so
-.env
-.venv/
+
+# Virtual environments and local environment files
+.venv*/
 venv/
+.env
 .envrc
 
+# Tests, coverage, and development-tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
 # Jupyter
-.ipynb_checkpoints
+.ipynb_checkpoints/
 
-# OS / editors
-.DS_Store
-.idea/
-.vscode/
-
-# distribution / build
+# Build and distribution artefacts
 build/
 dist/
 *.egg-info/
 
-# VS Code workspace
-.vscode/settings.json
+# Editors
+.vscode/
+.idea/
+
+# Operating systems
+.DS_Store
+Thumbs.db

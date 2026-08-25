@@ -1,9 +1,1 @@
-numpy>=1.24
-scipy
-lmfit
-pandas
-matplotlib
-pytest
-black
-ruff
-pre-commit
+-e .[cli,timeseries,dev]

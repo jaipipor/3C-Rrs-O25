@@ -1,11 +1,11 @@
-"""
+r"""
 Command-line runner for the 3C-O25 Rrs model.
 
 Example
 -------
 PowerShell, from the repository root:
 
-    & .\.venv\Scripts\python.exe .\scripts\run_3c.py `
+    & .\.venv\Scripts\python.exe .\scripts\run_3C.py `
         --input .\examples\example_single_spectrum.csv `
         --theta-s 59 `
         --theta-v 35 `

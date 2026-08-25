@@ -1,9 +1,39 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it."
+message: "If you use 3C-Rrs-O25 in scientific work, please cite both the software and the reference paper."
+
+type: software
 title: "3C-Rrs-O25"
-version: "0.1.0"
+version: "1.0.2"
+
 authors:
   - family-names: "Pitarch"
     given-names: "Jaime"
-date-released: "2025-10-23"
-license: "GPL-3.0"
+    affiliation: "National Research Council of Italy"
+
+abstract: >-
+  Python implementation of the analytical 3C-O25 model for fitting
+  above-water Lt/Es spectra and separating remote-sensing reflectance
+  from the modeled surface-reflection glint term.
+
+keywords:
+  - "remote sensing reflectance"
+  - "above-water radiometry"
+  - "glint correction"
+  - "ocean colour"
+  - "aquatic optics"
+
+repository-code: "https://github.com/jaipipor/3C-Rrs-O25"
+license: "GPL-3.0-or-later"
+date-released: "2026-08-25"
+
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Pitarch"
+      given-names: "Jaime"
+  title: "A general model for sun and sky glint removal in above-water optical radiometry: mathematical description and Python code"
+  journal: "Earth Science Informatics"
+  volume: 19
+  article-number: 78
+  year: 2026
+  doi: "10.1007/s12145-026-02114-w"

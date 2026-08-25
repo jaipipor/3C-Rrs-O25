@@ -1,4 +1,6 @@
-# keep text normalization and track data with LFS
-data/* filter=lfs diff=lfs merge=lfs -text
-*.npz filter=lfs diff=lfs merge=lfs -text
-G0*.txt filter=lfs diff=lfs merge=lfs -text
+# Normalize repository text files
+* text=auto
+
+# Store ancillary model data with Git LFS
+data/*.txt filter=lfs diff=lfs merge=lfs -text
+data/*.npz filter=lfs diff=lfs merge=lfs -text
