@@ -6,10 +6,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rrs3c"
 version = "1.0.2"
-description = "Analytical 3C remote-sensing reflectance model, O25 variant"
+description = "Analytical 3C Remote Sensing Reflectance (Rrs) model, O25 variant."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 
 authors = [
     { name = "Jaime Pitarch", email = "jaime.pitarch@cnr.it" },
@@ -23,7 +24,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
-cli = [
+examples = [
     "pandas",
     "matplotlib",
 ]
@@ -36,7 +37,6 @@ timeseries = [
 
 dev = [
     "build",
-    "twine",
     "pytest",
     "ruff",
     "black",
@@ -47,7 +47,23 @@ dev = [
 [project.urls]
 Repository = "https://github.com/jaipipor/3C-Rrs-O25"
 Issues = "https://github.com/jaipipor/3C-Rrs-O25/issues"
+Changelog = "https://github.com/jaipipor/3C-Rrs-O25/blob/main/CHANGELOG.md"
 
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]

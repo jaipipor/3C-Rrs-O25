@@ -1,196 +1,310 @@
-# DEVELOPMENT — quick reference
+# Development Guide
 
-This document contains the minimal, pragmatic instructions you need to develop, test and contribute to this repository on **Windows**, **macOS** and **Linux**. It focuses on the tasks that caused friction earlier: virtual environments, editable install, pre‑commit hooks, linting fixes and running examples.
+This document explains how to set up, develop, test, and contribute to **3C-Rrs-O25** on Windows, Linux, and macOS.
 
-> **Goal:** make it easy to run examples locally *without* installing the package system‑wide, keep consistent formatting with pre‑commit, and explain how to recover when hooks modify files.
+The project uses a `src` layout:
+
+```text
+3C-Rrs-O25/
+├── data/                     # Required ancillary model data
+├── examples/                 # Example input data and workflows
+├── notebooks/                # Interactive examples
+├── scripts/                  # Command-line utilities
+├── src/
+│   └── rrs3c/
+│       ├── __init__.py
+│       └── model.py          # Core 3C-O25 implementation
+├── tests/                    # Automated tests
+├── tools/                    # Development helper scripts
+├── CHANGELOG.md
+├── LICENSE
+├── README.md
+├── pyproject.toml
+└── requirements.txt
+```
+
+The recommended development workflow is:
+
+1. Obtain the complete repository.
+2. Verify that the required ancillary files are present in `data/`.
+3. Create a virtual environment.
+4. Install the project in editable mode.
+5. Create a dedicated branch for each change.
+6. Run tests and quality checks before committing.
+7. Open a pull request for review.
 
 ---
 
-## 1. Create and activate a virtual environment
+## 1. Requirements
 
-> **Why:** isolate dependencies and ensure the same tools (black, ruff, pytest) run from the project venv.
+The project requires:
 
-### Windows (PowerShell)
+- Python 3.10 or later
+- pip
+- Git, GitHub Desktop, or another Git client
+- the complete repository, including the ancillary files under `data/`
+
+Recommended development tools include:
+
+- Visual Studio Code
+- GitHub Desktop
+- PowerShell on Windows
+- Bash or Zsh on Linux and macOS
+
+Check the installed Python versions on Windows:
 
 ```powershell
-cd C:\path\to\3C-Rrs-O25
-python -m venv .venv
-# activate
-& .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+py --list
 ```
 
-### macOS / Linux (bash)
+Check the default Python version on Linux or macOS:
 
 ```bash
-cd /path/to/3C-Rrs-O25
-python -m venv .venv
-# activate
+python3 --version
+```
+
+---
+
+## 2. Obtain the repository
+
+You may use command-line Git or GitHub Desktop.
+
+### 2.1 Command-line Git
+
+Clone the repository:
+
+```bash
+git clone https://github.com/jaipipor/3C-Rrs-O25.git
+cd 3C-Rrs-O25
+```
+
+If the repository uses Git LFS, make sure Git LFS is installed and retrieve the actual ancillary files:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+Check the repository status:
+
+```bash
+git status
+```
+
+### 2.2 GitHub Desktop
+
+1. Open GitHub Desktop.
+2. Select **File > Clone repository**.
+3. Open the **GitHub.com** tab.
+4. Select `jaipipor/3C-Rrs-O25`.
+5. Choose a local folder.
+6. Select **Clone**.
+7. After cloning, select **Fetch origin**.
+8. If GitHub Desktop offers **Pull origin**, select it.
+9. Use **Repository > Open in Visual Studio Code** to open the project.
+
+GitHub Desktop replaces command-line Git operations such as cloning, fetching, pulling, branching, committing, and pushing. Python environment and package installation commands must still be run in a terminal.
+
+---
+
+## 3. Verify the ancillary data
+
+The core model currently expects its required ancillary resources in the repository-level `data/` directory.
+
+The required files include:
+
+```text
+data/G0p.txt
+data/G0w.txt
+data/G1p.txt
+data/G1w.txt
+data/abs_scat_seawater_20d_35PSU_20230922_short.txt
+data/vars_aph_v2.npz
+```
+
+Check that the text files contain numerical data and are not unresolved Git LFS pointers.
+
+An unresolved Git LFS pointer starts with text similar to:
+
+```text
+version https://git-lfs.github.com/spec/v1
+```
+
+The file `vars_aph_v2.npz` should be a binary NumPy archive with a realistic file size. A file of approximately 130 bytes is probably an unresolved Git LFS pointer.
+
+If the files are unresolved pointers, retrieve them with Git LFS:
+
+```bash
+git lfs pull
+```
+
+Users of GitHub Desktop should verify that Git LFS is installed and restart GitHub Desktop if necessary.
+
+Do not edit, regenerate, or replace the scientific ancillary files without documenting their provenance and validating the resulting model output.
+
+---
+
+## 4. Create a virtual environment
+
+A virtual environment keeps the project dependencies isolated from other Python installations.
+
+### 4.1 Windows PowerShell
+
+From the repository root:
+
+```powershell
+py -3.10 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+```
+
+You may replace `3.10` with another supported version, such as `3.11`, `3.12`, or `3.13`.
+
+If PowerShell blocks the activation script, allow locally created scripts for the current PowerShell session:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+.\.venv\Scripts\Activate.ps1
+```
+
+Alternatively, use the virtual environment interpreter directly without activation:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+```
+
+### 4.2 Linux and macOS
+
+From the repository root:
+
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
+```
+
+---
+
+## 5. Install the project for development
+
+The recommended development installation is editable:
+
+```bash
+python -m pip install -e ".[timeseries,dev]"
+```
+
+On Windows PowerShell, use the same command:
+
+```powershell
+python -m pip install -e ".[timeseries,dev]"
+```
+
+Editable installation means that Python imports `rrs3c` from the repository's `src/` directory. Changes made to `src/rrs3c/model.py` are therefore available immediately without rebuilding or reinstalling the package.
+
+The installation groups are defined in `pyproject.toml`.
+
+### Core installation
+
+Install only the core package and its runtime dependencies:
+
+```bash
+python -m pip install -e .
+```
+
+This installs the core requirements, including:
+
+- NumPy
+- SciPy
+- lmfit
+
+### Installation with example dependencies
+
+```bash
+python -m pip install -e ".[examples]"
+```
+
+This additionally installs packages used by examples and plotting, including:
+
+- pandas
+- Matplotlib
+
+### Installation with time-series dependencies
+
+```bash
+python -m pip install -e ".[timeseries]"
+```
+
+This additionally installs:
+
+- pandas
+- Matplotlib
+- xarray
+
+### Full development installation
+
+```bash
+python -m pip install -e ".[timeseries,dev]"
+```
+
+This additionally installs development tools such as:
+
+- pytest
+- Ruff
+- Black
+- pre-commit
+- build
+
+If `requirements.txt` contains the editable development installation, the equivalent convenience command is:
+
+```bash
 python -m pip install -r requirements.txt
 ```
 
-**Tip:** if the repository provides a `tools/setup_project.ps1` script, it may create and populate the venv automatically — read that script before running it.
-
 ---
 
-## 2. Install the package in editable mode (recommended)
+## 6. Verify the installation
 
-Installing editable allows `import rrs3c` to work everywhere without fiddling with `PYTHONPATH`.
+Check that the package imports successfully:
 
 ```bash
-# from repo root, with venv active
-pip install -e .
+python -c "import rrs3c; print(rrs3c.__file__)"
 ```
 
-After this, `python -c "from rrs3c.model import rrs_model_3C; print('ok')"` should print `ok`.
-
----
-
-## 3. Pre-commit: install and run hooks
-
-Pre-commit enforces consistent formatting (black, isort) and linting (ruff). Install the git hooks and run them.
+Check the public model class:
 
 ```bash
-# install hooks (one-time)
-python -m pre_commit install
-# run all hooks on all files (recommended before committing)
-python -m pre_commit run --all-files
+python -c "from rrs3c import rrs_model_3C_O25; print(rrs_model_3C_O25)"
 ```
 
-### What happens when a hook *changes* files?
-
-1. A hook like `black` or `isort` may automatically rewrite files during the commit attempt.
-2. The commit will *fail* and report the modified files.
-3. You must add the modified files and re-run the commit, e.g.:
+Check that the model can load the repository ancillary files:
 
 ```bash
-git add <files changed by pre-commit>
-git commit -m "chore: format via pre-commit"
+python -c "from rrs3c import rrs_model_3C_O25; model = rrs_model_3C_O25(); print(model.data_folder)"
 ```
 
-If pre-commit stashes unstaged changes and fails with `Stashed changes conflicted with hook auto-fixes... Rolling back fixes...`, ensure you:
+The reported data path should point to the repository-level `data/` directory.
 
-* `git status` to see unstaged and stashed files
-* `git add` the modified files and re-commit
+If model construction fails, verify:
 
-**Last resort:** bypass hooks for a single commit (not recommended):
-
-```bash
-git commit --no-verify -m "temporary bypass"
-```
+1. The command is being run from the complete repository checkout.
+2. The project is installed in editable mode.
+3. The required ancillary files exist.
+4. The ancillary files are real data and not Git LFS pointers.
+5. The active Python interpreter belongs to the intended virtual environment.
 
 ---
 
-## 4. Ruff / E402 situation (imports after `sys.path` changes)
+## 7. Create a development branch
 
-Ruff flags `E402` when an import isn't at the top of the file. In example scripts we intentionally add `src/` to `sys.path` before importing the package.
+Do not make substantive changes directly on `main`.
 
-**Best practice:** add an inline ignore on the specific import line:
+Use one branch for each focused correction or feature.
 
-```python
-from rrs3c.model import rrs_model_3C  # noqa: E402
-```
+Suggested branch names include:
 
-This documents the reason and silences Ruff for that line only. Don’t globally ignore `E402` unless you’re certain.
-
----
-
-## 5. Running the examples
-
-There are two ways:
-
-### A — Without installing (uses the script's `sys.path` shim)
-
-Run the example script from its folder so it can find the repository `src/` folder automatically.
-
-```bash
-cd examples/timeseries/src
-python run_timeseries.py --input-file ../example_time_series_data.csv --output-folder ../output --plot --verbose
-```
-
-### B — After editable install
-
-```bash
-# from anywhere
-python examples/timeseries/src/run_timeseries.py --input-file examples/timeseries/example_time_series_data.csv
-```
-
-If you still get `ModuleNotFoundError: No module named 'rrs3c'`, either run from the example folder (A) or set `PYTHONPATH`:
-
-**Windows PowerShell**
-
-```powershell
-$env:PYTHONPATH = (Resolve-Path .\src).Path
-python examples\timeseries\src\run_timeseries.py --input-file examples\timeseries\example_time_series_data.csv
-```
-
-**Unix**
-
-```bash
-PYTHONPATH=$(pwd)/src python examples/timeseries/src/run_timeseries.py --input-file examples/timeseries/example_time_series_data.csv
-```
-
----
-
-## 6. Running linters and auto-fixes locally
-
-If a tool in `.venv` is not on your PATH (e.g. `ruff`), call it via the Python module:
-
-```bash
-# fixable ruff issues (uses .venv Python)
-python -m ruff check . --fix
-# format with black
-python -m black .
-# sort imports with isort
-python -m isort .
-```
-
-On Windows, replace `python` with the exact Python from the venv if needed: `.venv\Scripts\python.exe`.
-
----
-
-## 7. Tests
-
-Run the test suite with pytest:
-
-```bash
-pytest -q
-```
-
-If a test fails, paste the full traceback into issues so it’s reproducible.
-
----
-
-## 8. CI hints
-
-A simple GitHub Actions workflow (`.github/workflows/ci.yml`) should:
-
-1. Checkout
-2. Setup Python
-3. Install requirements
-4. Run `pre-commit run --all-files`
-5. Run `pytest`
-
-This helps catching formatting or import regressions on PRs.
-
----
-
-## 9. Common problems & quick fixes
-
-* **Hook modifies files but commit fails:** `git add` the modified files and re-run `git commit`.
-* **`pre-commit` fetch errors when installing hooks:** network issue or transient remote tag. Re-run `pre-commit install` later; ensure your Git client can fetch.
-* **`ruff`: "F821 Undefined name 'rrs3c'"**: Usually indicates tests import incorrectly. Edit the test to `from rrs3c.model import rrs_model_3C` and use it directly.
-* **Interpolation ValueError in example:** check raw CSV rows for malformed lengths or missing values; the loader `load_jetty_data` should validate row lengths.
-
----
-
-## 10. If you want me to make the edits for you
-
-I can generate the exact file contents (pyproject.toml, CI file, DEVELOPMENT.md) and prepare a patch you can `git apply`. Tell me which files you want automated and I will produce them.
-
----
-
-*End of DEVELOPMENT.md*
+```text
+fix/input-validation
+fix/package-metadata
+test/model-regression
+docs/install-instructions
+feature/model
