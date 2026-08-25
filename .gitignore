@@ -32,3 +32,6 @@ dist/
 # Operating systems
 .DS_Store
 Thumbs.db
+
+# Generated time-series example outputs
+examples/timeseries/output/*
