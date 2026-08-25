@@ -1,43 +1,33 @@
-\
-        <#
-        tools\setup_project.ps1
+<#
+Set up the Windows development environment.
 
-        PowerShell script to set up the development environment on Windows:
-        - creates a virtual environment `.venv`
-        - installs requirements
-        - installs Git LFS and tracks `data/*`
-        - installs pre-commit and registers hooks
+Run from the repository root:
 
-        Run in PowerShell from the repository root:
-            .\tools\setup_project.ps1
-        #>
+    .\tools\setup_project.ps1
+#>
 
-        param(
-            [string]$venvName = ".venv"
-        )
+param(
+    [string]$VenvName = ".venv"
+)
 
-        # create virtual environment
-        python -m venv $venvName
+$ErrorActionPreference = "Stop"
+$Python = ".\$VenvName\Scripts\python.exe"
 
-        # activate venv (PowerShell)
-        & "$PWD\$venvName\Scripts\Activate.ps1"
+if (-not (Test-Path -LiteralPath $Python)) {
+    python -m venv $VenvName
+}
 
-        # upgrade pip and install requirements
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+& $Python -m pip install --upgrade pip
+& $Python -m pip install -e ".[examples,timeseries,dev]"
 
-        # git lfs installation (if git-lfs is available on PATH)
-        if (Get-Command git-lfs -ErrorAction SilentlyContinue) {
-            git lfs install
-            git lfs track "data/*"
-            git add .gitattributes
-            try { git commit -m "chore: track data with git-lfs" --no-verify } catch { }
-        } else {
-            Write-Host "git-lfs not found on PATH. Install Git LFS if you plan to track large data files." -ForegroundColor Yellow
-        }
+if (Get-Command git-lfs -ErrorAction SilentlyContinue) {
+    git lfs install
+    git lfs pull
+} else {
+    Write-Host "Git LFS not found. Install it to retrieve the model data." -ForegroundColor Yellow
+}
 
-        # install pre-commit (and register hooks)
-        pip install pre-commit
-        pre-commit install
+& $Python -m pre_commit install
 
-        Write-Host "Setup complete. Activate venv with: & \"$PWD\\$venvName\\Scripts\\Activate.ps1\"" -ForegroundColor Green
+Write-Host "Setup complete." -ForegroundColor Green
+Write-Host "Activate with: .\$VenvName\Scripts\Activate.ps1"

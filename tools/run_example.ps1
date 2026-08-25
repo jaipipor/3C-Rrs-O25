@@ -1,8 +1,7 @@
-\
-        # Simple helper to run the example script using the venv
-        param(
-          [string]$dataFolder = "data"
-        )
+# Run the time-series example with the project virtual environment
+param(
+    [string]$DataFolder = "data"
+)
 
-        & ".\.venv\Scripts\Activate.ps1"
-        python examples\run_timeseries.py --data-folder $dataFolder
+& ".\.venv\Scripts\python.exe" ".\examples\run_timeseries.py" `
+    --data-folder
