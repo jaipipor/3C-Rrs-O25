@@ -1,1 +1,1 @@
--e .[cli,timeseries,dev]
+-e .[timeseries,dev]
