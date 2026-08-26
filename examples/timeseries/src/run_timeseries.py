@@ -282,7 +282,7 @@ def main() -> int:
         spectra = spectra[keep]
 
     unique_times = pd.DatetimeIndex(sorted(times.unique()))
-    wavelengths = np.arange(350.0, 921.0, dtype=float)
+    wavelengths = np.arange(350.0, 941.0, dtype=float)
     output = allocate_output(unique_times.size, wavelengths.size)
     weights = build_weights(wavelengths)
     index_550 = int(np.where(wavelengths == 550.0)[0][0])
