@@ -1,6 +1,12 @@
-# Normalize repository text files
+# Normalize text files across platforms.
 * text=auto
 
-# Store ancillary model data with Git LFS
-data/*.txt filter=lfs diff=lfs merge=lfs -text
-data/*.npz filter=lfs diff=lfs merge=lfs -text
+# Keep PowerShell scripts with Windows line endings.
+*.ps1 text eol=crlf
+
+# Keep numerical text tables and CSV data with stable Unix line endings.
+data/*.txt text eol=lf
+*.csv text eol=lf
+
+# Treat NumPy archives as binary files.
+*.npz binary

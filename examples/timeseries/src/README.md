@@ -1,80 +1,228 @@
-# README for `/examples/timeseries/src`
+# Time-series example
 
-This directory contains a runnable example demonstrating how to use the **3C Remote Sensing Reflectance (Rrs)** analytical model implemented in the `rrs3c` package.
+This directory contains a runnable example showing how to apply the **3C-O25 Remote Sensing Reflectance model** to a time series of above-water radiometric measurements.
 
----
+The example uses the model implemented in:
+
+```text
+src/rrs3c/model.py
+```
+
+The current model class is:
+
+```python
+rrs_model_3C_O25
+```
 
 ## 📁 Directory structure
 
-```
-/examples/timeseries/src/
-│
-├── run_timeseries.py     # Main script to run the time-series example
-├── utils.py              # Helper routines (solar geometry, data flags, etc.)
-└── debug_import_cli.py   # Optional debugging script for import issues
+```text
+examples/
+└── timeseries/
+    ├── data/
+    │   ├── example_time_series_data.csv
+    │   └── example_time_series_data_long.csv
+    ├── output/
+    └── src/
+        ├── __init__.py
+        ├── README.md
+        ├── run_timeseries.py
+        └── utils.py
 ```
 
----
+The files and directories have the following purposes:
+
+- `run_timeseries.py` runs the time-series processing workflow.
+- `utils.py` provides data-loading, solar-geometry, and quality-flag helpers.
+- `../data/` contains the example time-series input files.
+- `../output/` is the default destination for generated results.
 
 ## 🚀 Purpose
 
-`run_timeseries.py` reads above-water spectral measurements (e.g. from a fixed station), processes them using the 3C model implemented in `src/rrs3c/model.py`, and optionally produces plots and NetCDF outputs.
+`run_timeseries.py` reads above-water spectral measurements, groups the observations by acquisition time, and processes the available radiometric measurements using `rrs_model_3C_O25`.
 
-It demonstrates how to:
+The example demonstrates how to:
 
-* Import and call the analytical 3C model (`rrs_model_3C`).
-* Handle time-series of spectral data.
-* Use solar geometry and quality flags (`utils.py`).
-* Write outputs (NetCDF, PNG diagnostics).
+- import and instantiate `rrs_model_3C_O25`
+- load a sequence of spectral radiometric measurements
+- combine irradiance, sky-radiance, and surface-radiance observations
+- calculate solar geometry
+- apply basic data-quality flags
+- fit the 3C-O25 model repeatedly
+- retrieve modeled remote-sensing reflectance, `Rrs`
+- retrieve the modeled surface-reflection contribution, `Rg`
+- save results as NetCDF files
+- optionally generate diagnostic plots
 
----
+The script represents an example research workflow. Users should review the geometry, quality controls, parameter values, and assumptions before applying the workflow to other instruments or datasets.
 
-## 🧭 How to run
+## ⚙️ Installation
 
-You can execute the script directly without installing the package, thanks to a built‑in `sys.path` adjustment that finds the `src/` folder relative to this script.
+Run the example from a complete repository checkout.
 
-### **Windows PowerShell**
+From the repository root, create a virtual environment and install the project with the time-series dependencies.
+
+### Windows PowerShell
 
 ```powershell
-cd C:\Users\Jaime\Documents\GitHub\3C-Rrs-O25
-& .\.venv\Scripts\Activate.ps1
-cd examples\timeseries\src
-python run_timeseries.py --input-file ..\example_time_series_data.csv --output-folder ..\output --plot --verbose
+py -3.10 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+python -m pip install --upgrade pip
+python -m pip install -e ".[timeseries]"
 ```
 
-### **macOS / Linux**
+A different supported Python version, such as Python 3.11, 3.12, or 3.13, may be used.
+
+If PowerShell blocks the activation script:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+.\.venv\Scripts\Activate.ps1
+```
+
+Alternatively, use the virtual-environment interpreter directly:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[timeseries]"
+```
+
+### Linux and macOS
 
 ```bash
-cd /path/to/3C-Rrs-O25
+python3 -m venv .venv
 source .venv/bin/activate
-cd examples/timeseries/src
-python run_timeseries.py --input-file ../example_time_series_data.csv --output-folder ../output --plot --verbose
+
+python -m pip install --upgrade pip
+python -m pip install -e ".[timeseries]"
 ```
 
-If the script cannot find the module `rrs3c`, ensure you are running it from within the example directory, or set:
+Editable installation is recommended because the example uses the source package and the repository-level ancillary model data.
+
+## 🧭 Run from the repository root
+
+Running from the repository root keeps all paths explicit and is the recommended method.
+
+### Windows PowerShell
+
+```powershell
+python ".\examples\timeseries\src\run_timeseries.py" `
+    --input-file "example_time_series_data.csv" `
+    --input-folder ".\examples\timeseries\data" `
+    --output-folder ".\examples\timeseries\output" `
+    --verbose
+```
+
+To generate diagnostic plots:
+
+```powershell
+python ".\examples\timeseries\src\run_timeseries.py" `
+    --input-file "example_time_series_data.csv" `
+    --input-folder ".\examples\timeseries\data" `
+    --output-folder ".\examples\timeseries\output" `
+    --plot `
+    --verbose
+```
+
+### Linux and macOS
 
 ```bash
-export PYTHONPATH=$(pwd)/src
+python examples/timeseries/src/run_timeseries.py \
+    --input-file example_time_series_data.csv \
+    --input-folder examples/timeseries/data \
+    --output-folder examples/timeseries/output \
+    --verbose
 ```
 
----
+To generate diagnostic plots:
 
-
-## 🧩 Example command-line interface
-
+```bash
+python examples/timeseries/src/run_timeseries.py \
+    --input-file example_time_series_data.csv \
+    --input-folder examples/timeseries/data \
+    --output-folder examples/timeseries/output \
+    --plot \
+    --verbose
 ```
-usage: run_timeseries.py [-h] [--input-file INPUT_FILE] [--input-folder INPUT_FOLDER]
-                         [--output-folder OUTPUT_FOLDER] [--date DATE] [--plot] [--verbose]
+
+## 📂 Run from the script directory
+
+The example may also be run from:
+
+```text
+examples/timeseries/src/
 ```
 
-Options:
+### Windows PowerShell
 
-* `--input-file` : CSV with spectral time series (default: `example_time_series_data.csv`)
-* `--input-folder` : Folder with the input file (default: script folder)
-* `--output-folder` : Folder for results (default: `../output`)
-* `--plot` : Save PNG diagnostics
-* `--verbose` : Enable detailed logging
+```powershell
+Set-Location ".\examples\timeseries\src"
 
----
+python ".\run_timeseries.py" `
+    --input-file "example_time_series_data.csv" `
+    --input-folder "..\data" `
+    --output-folder "..\output" `
+    --verbose
+```
 
-**End of README — /examples/timeseries/src**
+### Linux and macOS
+
+```bash
+cd examples/timeseries/src
+
+python run_timeseries.py \
+    --input-file example_time_series_data.csv \
+    --input-folder ../data \
+    --output-folder ../output \
+    --verbose
+```
+
+The input file is located under `../data`, not directly under the parent `timeseries` directory.
+
+## 🧩 Command-line interface
+
+Display the authoritative command-line help with:
+
+```bash
+python examples/timeseries/src/run_timeseries.py --help
+```
+
+On Windows PowerShell:
+
+```powershell
+python ".\examples\timeseries\src\run_timeseries.py" --help
+```
+
+The interface is expected to provide options similar to:
+
+```text
+usage: run_timeseries.py [-h]
+                         [--input-file INPUT_FILE]
+                         [--input-folder INPUT_FOLDER]
+                         [--output-folder OUTPUT_FOLDER]
+                         [--date DATE]
+                         [--plot]
+                         [--verbose]
+```
+
+### Options
+
+- `--input-file` specifies the CSV filename.
+- `--input-folder` specifies the directory containing the input CSV.
+- `--output-folder` specifies the directory used for NetCDF and plot outputs.
+- `--date` supplies an optional date label for output products.
+- `--plot` enables generation of diagnostic PNG plots.
+- `--verbose` enables detailed logging.
+
+The output produced by `--help` should be treated as authoritative if the command-line interface changes.
+
+## 📥 Input data
+
+The default short example is:
+
+```text
+examples/timeseries/data/example_time_series_data.csv
+```
+
+A longer example may also be

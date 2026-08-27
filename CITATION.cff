@@ -3,7 +3,7 @@ message: "If you use 3C-Rrs-O25 in scientific work, please cite both the softwar
 
 type: software
 title: "3C-Rrs-O25"
-version: "1.0.2"
+version: "1.0.3"
 
 authors:
   - family-names: "Pitarch"

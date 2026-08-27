@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rrs3c"
-version = "1.0.2"
+version = "1.0.3"
 description = "Analytical 3C Remote Sensing Reflectance (Rrs) model, O25 variant."
 readme = "README.md"
 requires-python = ">=3.10"
