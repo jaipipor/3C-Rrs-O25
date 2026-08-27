@@ -46,7 +46,7 @@ dev = [
     "build",
     "pytest",
     "ruff",
-    "black",
+    "black[jupyter]",
     "pre-commit",
 ]
 
