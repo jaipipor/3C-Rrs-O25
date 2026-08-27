@@ -1,1 +1,1 @@
--e .[timeseries,dev]
+-e .[timeseries,notebooks,dev]
