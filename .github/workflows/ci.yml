@@ -96,10 +96,11 @@ jobs:
       - name: Run Ruff
         run: python -m ruff check .
 
-      - name: Check Black formatting
-        run: python -m black --check .
       - name: Show Black version
         run: python -m black --version
+
+      - name: Check Black formatting
+        run: python -m black --check .
 
       - name: Run single-spectrum smoke test
         run: >
