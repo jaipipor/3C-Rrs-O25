@@ -19,7 +19,7 @@ def valid_inputs():
     return {
         "wl": np.array([500.0, 550.0, 600.0]),
         "LiEs": np.array([0.10, 0.11, 0.12]),
-        "LtEs": np.array([0.02, 0.025, 0.03]),
+        "LtEs": np.array([0.020, 0.025, 0.030]),
         "params": lm.Parameters(),
         "weights": np.ones(3),
         "geom": (59.0, 35.0, 100.0),
@@ -33,7 +33,7 @@ def valid_inputs():
     [
         ("wl", [[500.0, 550.0, 600.0]]),
         ("LiEs", [[0.10, 0.11, 0.12]]),
-        ("LtEs", [[0.02, 0.025, 0.03]]),
+        ("LtEs", [[0.020, 0.025, 0.030]]),
         ("weights", [[1.0, 1.0, 1.0]]),
     ],
 )
@@ -57,11 +57,11 @@ def test_rejects_non_one_dimensional_inputs(
     ("name", "value"),
     [
         ("LiEs", [0.10, 0.11]),
-        ("LtEs", [0.02, 0.025]),
+        ("LtEs", [0.020, 0.025]),
         ("weights", [1.0, 1.0]),
     ],
 )
-def test_rejects_mismatched_lengths(
+def test_rejects_mismatched_shapes(
     model,
     valid_inputs,
     name,
@@ -82,7 +82,7 @@ def test_rejects_mismatched_lengths(
     [
         ("wl", [500.0, np.nan, 600.0]),
         ("LiEs", [0.10, np.inf, 0.12]),
-        ("LtEs", [0.02, np.nan, 0.03]),
+        ("LtEs", [0.020, np.nan, 0.030]),
         ("weights", [1.0, np.inf, 1.0]),
     ],
 )
