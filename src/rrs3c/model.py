@@ -597,7 +597,3 @@ class rrs_model_3C_O25:
             if hasattr(self, "_G_precomputed"):
                 del self._G_precomputed
         return out, Rrs_mod, Rg
-
-
-if __name__ == "__main__":
-    pass
