@@ -216,8 +216,8 @@ class rrs_model_3C_O25:
             preG = getattr(self, "_G_precomputed", None)
 
             # unpack ancillary parameters and geometry
-            (am, rh, pressure) = anc
-            (theta_s, theta_v, phi) = geom
+            am, rh, pressure = anc
+            theta_s, theta_v, phi = geom
             cosths = np.cos(np.deg2rad(theta_s))
 
             # Atmospheric partition (Gregg and Carder 1990)
