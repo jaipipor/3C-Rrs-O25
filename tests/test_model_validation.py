@@ -133,3 +133,60 @@ def test_rejects_decreasing_wavelengths(model, valid_inputs):
         match="wl must be strictly increasing",
     ):
         model.fit_LtEs(**inputs)
+
+
+def test_rejects_missing_parameters(model, valid_inputs):
+    with pytest.raises(
+        ValueError,
+        match="Missing model parameters",
+    ):
+        model.fit_LtEs(**valid_inputs)
+
+
+@pytest.mark.parametrize(
+    ("geometry", "expected_message"),
+    [
+        ((-1.0, 35.0, 100.0), "theta_s"),
+        ((88.0, 35.0, 100.0), "theta_s"),
+        ((59.0, -1.0, 100.0), "theta_v"),
+        ((59.0, 88.0, 100.0), "theta_v"),
+        ((59.0, 35.0, -1.0), "phi"),
+        ((59.0, 35.0, 181.0), "phi"),
+    ],
+)
+def test_rejects_geometry_outside_g_table_domain(
+    model,
+    valid_inputs,
+    geometry,
+    expected_message,
+):
+    inputs = valid_inputs.copy()
+    inputs["geom"] = geometry
+
+    with pytest.raises(
+        ValueError,
+        match=expected_message,
+    ):
+        model.fit_LtEs(**inputs)
+
+
+@pytest.mark.parametrize(
+    "geometry",
+    [
+        (59.0, 35.0),
+        (59.0, 35.0, 100.0, 0.0),
+    ],
+)
+def test_rejects_invalid_geometry_length(
+    model,
+    valid_inputs,
+    geometry,
+):
+    inputs = valid_inputs.copy()
+    inputs["geom"] = geometry
+
+    with pytest.raises(
+        ValueError,
+        match="geom must contain",
+    ):
+        model.fit_LtEs(**inputs)

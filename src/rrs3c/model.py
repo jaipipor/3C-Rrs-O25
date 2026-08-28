@@ -118,7 +118,7 @@ class rrs_model_3C_O25:
         ts = tv.copy()
 
         # helper to load and reshape
-        def ld3(fname):
+        def load_g_table(fname):
             path = self.data_folder / fname
             m = np.loadtxt(path)
             arr = m.reshape(len(az), len(ts), len(tv)).transpose(1, 2, 0)
@@ -129,18 +129,18 @@ class rrs_model_3C_O25:
         self._G_tv = tv
         self._G_az = az
         # load the 4 G tables as arrays
-        self._G0w = ld3("G0w.txt")
-        self._G1w = ld3("G1w.txt")
-        self._G0p = ld3("G0p.txt")
-        self._G1p = ld3("G1p.txt")
+        self._G0w = load_g_table("G0w.txt")
+        self._G1w = load_g_table("G1w.txt")
+        self._G0p = load_g_table("G0p.txt")
+        self._G1p = load_g_table("G1p.txt")
         # build scipy RegularGridInterpolator objects (fast C evaluation)
         from scipy.interpolate import RegularGridInterpolator
 
         # The interpolators are created using axes order (ts, tv, az)
-        self._G_i0 = RegularGridInterpolator((ts, tv, az), self._G0w)
-        self._G_i1 = RegularGridInterpolator((ts, tv, az), self._G1w)
-        self._G_i2 = RegularGridInterpolator((ts, tv, az), self._G0p)
-        self._G_i3 = RegularGridInterpolator((ts, tv, az), self._G1p)
+        self._G0w_interpolator = RegularGridInterpolator((ts, tv, az), self._G0w)
+        self._G1w_interpolator = RegularGridInterpolator((ts, tv, az), self._G1w)
+        self._G0p_interpolator = RegularGridInterpolator((ts, tv, az), self._G0p)
+        self._G1p_interpolator = RegularGridInterpolator((ts, tv, az), self._G1p)
 
     def _load_aph(self):
         # --- load aph templates  ---
@@ -174,14 +174,17 @@ class rrs_model_3C_O25:
             `(G0w, G1w, G0p, G1p)` evaluated at the requested geometry
         """
         # ensure absolute positive value for azimuth
-        a = abs(float(a))
-        pt = (float(s), float(v), a)
+        point = (
+            float(s),
+            float(v),
+            float(a),
+        )
         # use the interpolator objects created in _load_G_tables
         return (
-            float(self._G_i0(pt)),
-            float(self._G_i1(pt)),
-            float(self._G_i2(pt)),
-            float(self._G_i3(pt)),
+            float(self._G0w_interpolator(point)),
+            float(self._G1w_interpolator(point)),
+            float(self._G0p_interpolator(point)),
+            float(self._G1p_interpolator(point)),
         )
 
     def model_3C_O25(self):
@@ -416,33 +419,38 @@ class rrs_model_3C_O25:
 
         # ensure numpy arrays
         wl = np.asarray(wl, dtype=float)
-        if np.any(np.diff(wl) <= 0):
-            raise ValueError("wl must be strictly increasing")
         LiEs = np.asarray(LiEs, dtype=float)
         LtEs = np.asarray(LtEs, dtype=float)
         weights = np.asarray(weights, dtype=float)
-        if np.any(weights < 0):
-            raise ValueError("weights must be non-negative")
-        sqrt_weights = np.sqrt(weights)
 
-        # runtime validation
         if not (wl.ndim == LiEs.ndim == LtEs.ndim == weights.ndim == 1):
             raise ValueError("wl, LiEs, LtEs, and weights must be 1D arrays")
 
         if not (wl.shape == LiEs.shape == LtEs.shape == weights.shape):
             raise ValueError("wl, LiEs, LtEs, and weights must have the same shape")
 
+        if not np.all(np.isfinite(wl)):
+            raise ValueError("wl contains non-finite values")
+
+        if not np.all(np.isfinite(LiEs)):
+            raise ValueError("LiEs contains non-finite values")
+
+        if not np.all(np.isfinite(LtEs)):
+            raise ValueError("LtEs contains non-finite values")
+
+        if not np.all(np.isfinite(weights)):
+            raise ValueError("weights contains non-finite values")
+
+        if wl.size < 2:
+            raise ValueError("wl must contain at least two wavelengths")
+
+        if np.any(np.diff(wl) <= 0):
+            raise ValueError("wl must be strictly increasing")
+
         if np.any(weights < 0):
             raise ValueError("weights must be non-negative")
 
-        if not np.all(np.isfinite(wl)):
-            raise ValueError("wl contains non-finite values")
-        if not np.all(np.isfinite(LiEs)):
-            raise ValueError("LiEs contains non-finite values")
-        if not np.all(np.isfinite(LtEs)):
-            raise ValueError("LtEs contains non-finite values")
-        if not np.all(np.isfinite(weights)):
-            raise ValueError("weights contains non-finite values")
+        sqrt_weights = np.sqrt(weights)
 
         wl_key = hashlib.sha1(wl.tobytes()).hexdigest()
         penalty_scale = np.sqrt(
@@ -482,6 +490,55 @@ class rrs_model_3C_O25:
             )  # linear in neg -> objective ~ penalty_weight * neg^2
 
             return np.concatenate([res_data, res_pen])  # fixed size: 2*nw
+
+        if len(geom) != 3:
+            raise ValueError("geom must contain theta_s, theta_v, and phi")
+
+        theta_s, theta_v, phi = map(float, geom)
+
+        if not np.all(
+            np.isfinite(
+                [
+                    theta_s,
+                    theta_v,
+                    phi,
+                ]
+            )
+        ):
+            raise ValueError("geom contains non-finite values")
+
+        if not 0.0 <= theta_s <= 87.5:
+            raise ValueError("theta_s must be between 0 and 87.5 degrees")
+
+        if not 0.0 <= theta_v <= 87.5:
+            raise ValueError("theta_v must be between 0 and 87.5 degrees")
+
+        if not 0.0 <= phi <= 180.0:
+            raise ValueError("phi must be between 0 and 180 degrees")
+
+        geom = (
+            theta_s,
+            theta_v,
+            phi,
+        )
+
+        required_params = (
+            "beta",
+            "alpha",
+            "C",
+            "N",
+            "Y",
+            "SNAP",
+            "Sg",
+            "rho",
+            "rho_d",
+            "rho_s",
+        )
+
+        missing_params = [name for name in required_params if name not in params]
+
+        if missing_params:
+            raise ValueError("Missing model parameters: " + ", ".join(missing_params))
 
         # Precompute G functions if geom is constant for this fit
         # _G_precomputed is used by model_3C to bypass interpolator calls
