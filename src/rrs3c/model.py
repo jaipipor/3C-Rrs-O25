@@ -415,10 +415,13 @@ class rrs_model_3C_O25:
         """
 
         # ensure numpy arrays
-        wl = np.asarray(wl)
-        LiEs = np.asarray(LiEs)
-        LtEs = np.asarray(LtEs)
-        sqrt_weights = np.sqrt(np.asarray(weights))
+        wl = np.asarray(wl, dtype=float)
+        LiEs = np.asarray(LiEs, dtype=float)
+        LtEs = np.asarray(LtEs, dtype=float)
+        weights = np.asarray(weights, dtype=float)
+        if np.any(weights < 0):
+            raise ValueError("weights must be non-negative")
+        sqrt_weights = np.sqrt(weights)
 
         # runtime validation
         if not (wl.ndim == LiEs.ndim == LtEs.ndim == weights.ndim == 1):
