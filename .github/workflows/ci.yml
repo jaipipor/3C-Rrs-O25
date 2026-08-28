@@ -98,6 +98,8 @@ jobs:
 
       - name: Check Black formatting
         run: python -m black --check .
+      - name: Show Black version
+        run: python -m black --version
 
       - name: Run single-spectrum smoke test
         run: >
