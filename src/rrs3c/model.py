@@ -416,6 +416,8 @@ class rrs_model_3C_O25:
 
         # ensure numpy arrays
         wl = np.asarray(wl, dtype=float)
+        if np.any(np.diff(wl) <= 0):
+            raise ValueError("wl must be strictly increasing")
         LiEs = np.asarray(LiEs, dtype=float)
         LtEs = np.asarray(LtEs, dtype=float)
         weights = np.asarray(weights, dtype=float)

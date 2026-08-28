@@ -111,3 +111,25 @@ def test_rejects_negative_weights(model, valid_inputs):
         match="weights must be non-negative",
     ):
         model.fit_LtEs(**inputs)
+
+
+def test_rejects_duplicate_wavelengths(model, valid_inputs):
+    inputs = valid_inputs.copy()
+    inputs["wl"] = np.array([500.0, 500.0, 600.0])
+
+    with pytest.raises(
+        ValueError,
+        match="wl must be strictly increasing",
+    ):
+        model.fit_LtEs(**inputs)
+
+
+def test_rejects_decreasing_wavelengths(model, valid_inputs):
+    inputs = valid_inputs.copy()
+    inputs["wl"] = np.array([600.0, 550.0, 500.0])
+
+    with pytest.raises(
+        ValueError,
+        match="wl must be strictly increasing",
+    ):
+        model.fit_LtEs(**inputs)
