@@ -43,6 +43,8 @@ from pathlib import Path
 import lmfit as lm
 import numpy as np
 
+_NEGATIVE_RG_PENALTY_WEIGHT = 1e6
+
 
 # ---------------------------------------------------------------------------
 # Core model class
@@ -159,16 +161,13 @@ class rrs_model_3C_O25:
         self._G1p_interpolator = RegularGridInterpolator((ts, tv, az), self._G1p)
 
     def _load_aph(self):
-        # --- load aph templates  ---
-        aph_pathfilename = self.data_folder / "vars_aph_v2.npz"
-        aph_data = np.load(aph_pathfilename)
-        # wavelength axis (squeezed in case it was saved as (nw,) or (1,nw))
-        self.l_int = aph_data["l_int"].squeeze()
-        # 'aph_norm_55' is expected to contain the 55 templates already normalized
-        # by their value around 670 nm
-        # vars_aph.npz is expected to contain 'aph_norm_55' and 'aph670_bounds'. Use them directly
-        self._aph_norm_55 = aph_data["aph_norm_55"]  # shape (55, nw)
-        self._aph670_bounds = aph_data["aph670_bounds"].squeeze()
+        """Load the phytoplankton absorption templates."""
+        aph_path = self.data_folder / "vars_aph_v2.npz"
+
+        with np.load(aph_path) as aph_data:
+            self.l_int = aph_data["l_int"].squeeze().copy()
+            self._aph_norm_55 = aph_data["aph_norm_55"].copy()
+            self._aph670_bounds = aph_data["aph670_bounds"].squeeze().copy()
 
     def _G_eval(
         self, s: float, v: float, a: float
@@ -470,7 +469,7 @@ class rrs_model_3C_O25:
 
         wl_key = hashlib.sha1(wl.tobytes()).hexdigest()
         penalty_scale = np.sqrt(
-            1e6
+            _NEGATIVE_RG_PENALTY_WEIGHT
         )  # adjust this weight to control the strength of the penalty on negative Rg
 
         def resid(p):
@@ -601,79 +600,4 @@ class rrs_model_3C_O25:
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import pandas as pd
-
-    # Example / diagnostic run when the module is executed directly.
-    # Adjust `data_folder` to your local path if needed.
-    repo_root = Path(__file__).parent.parent.parent
-    data_folder = repo_root / "data"
-    examples_folder = repo_root / "examples"
-    data = pd.read_csv(
-        examples_folder / "example_single_spectrum.csv",
-        index_col=0,
-        skiprows=15,
-    )
-    # extract wavelength and columns: Li, Lt, Es
-    wl = data.index.values
-    Li = data.iloc[:, 0].values
-    Lt = data.iloc[:, 1].values
-    Es = data.iloc[:, 2].values
-    geom = (59, 35, 100)  # Jetty 2
-    am = 4
-    rh = 60
-    pressure = 1013.25
-    model = rrs_model_3C_O25(data_folder=data_folder)
-    params = lm.Parameters()
-    params.add_many(
-        ("C", 5, True, 0.1, 50, None),
-        ("N", 1, True, 0.01, 100, None),
-        ("Y", 0.5, True, 0.01, 5, None),
-        ("SNAP", 0.015, True, 0.005, 0.03, None),
-        ("Sg", 0.015, True, 0.005, 0.03, None),
-        ("rho", 0.02, False, 0, 0.03, None),
-        ("rho_d", 0.0, True, 0, 10, None),
-        ("rho_s", 0.0, True, -0.01, 0.01, None),
-        ("alpha", 0.2, True, 0, 2, None),
-        ("beta", 0.05, True, 0, 1, None),
-    )
-
-    # weights: remove H2O band, downweight UV, upweight NIR
-    weights = np.ones_like(wl, dtype=float)
-    weights[(wl >= 760) & (wl <= 765)] = 0.0  # Remove the H2O feature
-    weights[wl > 800] = 2.0  # Upweight the NIR
-
-    # optional profiling block to inspect performance
-    import cProfile
-    import pstats
-
-    pr = cProfile.Profile()
-    pr.enable()
-    try:
-        reg, R_rs_mod, Rg = model.fit_LtEs(
-            wl, Li / Es, Lt / Es, params, weights, geom, anc=(am, rh, pressure)
-        )
-    except Exception as e:
-        # Ensure profiler is disabled on error and provide diagnostics
-        pr.disable()
-        print("Error during model.fit_LtEs:", repr(e))
-        # Re-raise so the calling environment is aware (remove the raise if you prefer to continue)
-        raise
-    else:
-        pr.disable()
-        ps = pstats.Stats(pr).sort_stats("cumtime")
-        ps.print_stats(30)
-
-    # Quick plotting of measured vs modeled quantities
-    plt.figure()
-    plt.grid(True)
-    plt.plot(wl, Lt / Es, label="L_t/E_s, measured")
-    plt.plot(wl, R_rs_mod + Rg, label="L_t/E_s, modeled")
-    plt.plot(wl, R_rs_mod, label=" R_rs, modeled")
-    plt.plot(wl, Rg, label="R_g, 3C output")
-    plt.plot(wl, Lt / Es - Rg, label="R_rs, 3C output")
-    plt.xlabel("wavelength (nm)")
-    plt.ylabel("Various reflectances (sr^(-1))")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    pass
