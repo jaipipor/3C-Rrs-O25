@@ -52,3 +52,36 @@ def test_ancillary_arrays_are_coherent():
     assert np.all(np.diff(model._G_ts) > 0)
     assert np.all(np.diff(model._G_tv) > 0)
     assert np.all(np.diff(model._G_az) > 0)
+
+
+def test_water_iop_table_structure(model):
+    water_iops = model.lw_aw_bw
+
+    assert water_iops.ndim == 2
+    assert water_iops.shape[1] == 3
+    assert water_iops.shape[0] > 1
+
+
+def test_water_iop_table_contains_finite_values(model):
+    assert np.all(np.isfinite(model.lw_aw_bw))
+
+
+def test_water_iop_wavelengths_are_strictly_increasing(model):
+    wavelengths = model.lw_aw_bw[:, 0]
+
+    assert np.all(np.diff(wavelengths) > 0)
+
+
+def test_water_iop_sentinel_is_removed(model):
+    assert not np.array_equal(
+        model.lw_aw_bw[-1],
+        np.array([-1.0, -1.0, -1.0]),
+    )
+
+
+def test_water_iop_values_are_nonnegative(model):
+    absorption = model.lw_aw_bw[:, 1]
+    backscattering = model.lw_aw_bw[:, 2]
+
+    assert np.all(absorption >= 0)
+    assert np.all(backscattering >= 0)

@@ -96,19 +96,35 @@ class rrs_model_3C_O25:
         self.model = self.model_3C_O25()
 
     def _load_water_iops(self):
-        # Load water absorption (aw) and pure-water backscatter (bbw) table.
-        # Filename is historical; the file is expected to have three columns:
-        # wavelength, aw, bbw and some header lines (skipped with skiprows=8).
-        water_IOPs_pathfilename = (
+        """Load the pure-water absorption and backscattering table."""
+        water_iops_path = (
             self.data_folder / "abs_scat_seawater_20d_35PSU_20230922_short.txt"
         )
-        # aw: WOPP v3. bbw: Zhang 2009
-        raw = np.loadtxt(water_IOPs_pathfilename, skiprows=8)
-        # Intentionally discard the last row because the data file includes
-        # a trailing row not to indicate end of file.
-        raw = raw[:-1] if raw.shape[1] >= 3 else raw
-        # store the raw table for interpolation in the forward model
-        self.lw_aw_bw = raw  # columns: wavelength, aw, bbw
+
+        # Columns: wavelength, pure-water absorption aw,
+        # and pure-water backscattering bbw.
+        water_iops = np.loadtxt(
+            water_iops_path,
+            skiprows=8,
+        )
+
+        if water_iops.ndim != 2 or water_iops.shape[1] != 3:
+            raise ValueError(
+                "The water IOP table must contain exactly "
+                "three columns: wavelength, aw, and bbw"
+            )
+
+        # The source file ends with the sentinel row [-1, -1, -1].
+        if np.all(water_iops[-1] == -1.0):
+            water_iops = water_iops[:-1]
+
+        if not np.isfinite(water_iops).all():
+            raise ValueError("The water IOP table contains non-finite values")
+
+        if np.any(np.diff(water_iops[:, 0]) <= 0):
+            raise ValueError("Water IOP wavelengths must be strictly increasing")
+
+        self.lw_aw_bw = water_iops
 
     def _load_G_tables(self):
         # The G coefficients are stored in text files.

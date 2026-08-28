@@ -4,14 +4,7 @@ import lmfit as lm
 import numpy as np
 import pytest
 
-from rrs3c import rrs_model_3C_O25
-
 ROOT = Path(__file__).resolve().parents[1]
-
-
-@pytest.fixture
-def model():
-    return rrs_model_3C_O25(data_folder=ROOT / "data")
 
 
 @pytest.fixture
