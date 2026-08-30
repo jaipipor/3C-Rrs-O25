@@ -177,10 +177,8 @@ Use the direct Python API for integration into operational processing chains. Th
 
 The repository includes:
 
-- a single-spectrum demonstration
-- a time-series processing example
 - a quick-start notebook
-- a parameter-analysis notebook
+- a time-series processing example
 
 Open the notebooks with Jupyter Lab:
 
@@ -221,21 +219,6 @@ Activate the virtual environment and install the project in editable mode:
 
 ```bash
 python -m pip install -e .
-```
-
-### Ancillary files contain Git LFS pointer text
-
-Retrieve the actual files:
-
-```bash
-git lfs pull
-git lfs fsck
-```
-
-A file beginning with the following line is only a pointer:
-
-```text
-version https://git-lfs.github.com/spec/v1
 ```
 
 ### PowerShell refuses to activate the environment

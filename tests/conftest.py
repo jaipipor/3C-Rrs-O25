@@ -11,8 +11,14 @@ DATA_FOLDER = REPOSITORY_ROOT / "data"
 
 
 @pytest.fixture
-def model() -> rrs_model_3C_O25:
-    """Return a fresh model instance using the repository data files."""
+def data_folder() -> Path:
+    """Return the repository ancillary-data directory."""
+    return DATA_FOLDER.resolve()
+
+
+@pytest.fixture
+def model(data_folder: Path) -> rrs_model_3C_O25:
+    """Return a fresh model using the repository ancillary data."""
     return rrs_model_3C_O25(
-        data_folder=DATA_FOLDER,
+        data_folder=data_folder,
     )

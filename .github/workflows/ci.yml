@@ -118,6 +118,14 @@ jobs:
       - name: Build source distribution and wheel
         run: python -m build
 
+      - name: Test installed wheel
+        shell: bash
+        run: |
+          python -m venv /tmp/rrs3c-wheel-test
+          /tmp/rrs3c-wheel-test/bin/python -m pip install dist/*.whl
+          cd /tmp
+          /tmp/rrs3c-wheel-test/bin/python -c "from rrs3c import rrs_model_3C_O25; model = rrs_model_3C_O25(); print('Data folder:', model.data_folder)"
+
       - name: List distribution artifacts
         shell: bash
         run: ls -lh dist

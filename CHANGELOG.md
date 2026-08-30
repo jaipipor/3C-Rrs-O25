@@ -5,13 +5,95 @@ All notable changes to 3C-Rrs-O25 are documented in this file.
 The format is based on Keep a Changelog,
 and the project follows https://semver.org/ where practical.
 
-## [Unreleased]
+## [1.0.4] - 2026-08-29
 
-### Planned
+### Added
 
-- Expand automated coverage of the forward model and inversion workflow.
-- Improve validation of model inputs and ancillary data.
-- Continue reviewing numerical robustness and scientific boundary conditions.
+- Added automated testing on Linux and Windows with Python 3.10,
+  3.11, 3.12, and 3.13.
+- Added dedicated tests for:
+  - public package import and model construction
+  - model input validation
+  - ancillary scientific data integrity
+  - G-function lookup-table loading and interpolation
+  - single-spectrum numerical regression
+- Added an optional `notebooks` dependency group containing the packages
+  required for interactive and automated notebook execution.
+- Added a named internal constant for the negative modeled-glint penalty.
+
+### Changed
+
+- Expanded the continuous-integration workflow with:
+  - dependency consistency checks
+  - Python compilation checks
+  - Ruff linting
+  - Black formatting validation
+  - automated tests
+  - a single-spectrum smoke test
+  - source-distribution and wheel building
+- Improved model input handling by consistently converting spectral inputs
+  to floating-point NumPy arrays.
+- Reordered model validation so dimensions, shapes, finite values,
+  wavelength ordering, and weights are checked before numerical operations.
+- Added explicit validation that wavelengths are strictly increasing.
+- Added explicit validation of solar zenith, viewing zenith, and relative
+  azimuth against the domain of the G-function lookup tables.
+- Added explicit validation that all required fitting parameters are present.
+- Improved the loading of the pure-water optical-property table by:
+  - checking its three-column structure
+  - removing the final row only when it matches the documented sentinel
+  - checking for finite values
+  - checking for a strictly increasing wavelength coordinate
+- Renamed internal G-function loaders and interpolators to identify their
+  corresponding water and particle coefficients more clearly.
+- Loaded the phytoplankton absorption archive using a context manager.
+- Applied consistent Black formatting to Python files and notebook code cells.
+- Removed the duplicated executable example, plotting, and profiling code
+  from `src/rrs3c/model.py`; the maintained single-spectrum interfaces are
+  now `scripts/run_3C.py` and the quick-start notebook.
+
+### Fixed
+
+- Fixed support for array-like model inputs, including Python lists used
+  for spectral weights.
+- Prevented the square root of invalid negative weights from being evaluated
+  before input validation.
+- Removed the runtime warning previously produced while testing negative
+  spectral weights.
+- Corrected internal handling and reporting of invalid model geometry.
+- Corrected several stale or inconsistent notebook checks related to the
+  time-series wavelength grid.
+- Replaced fixed assumptions
+
+### Packaging
+
+- Included the required ancillary scientific resources in the wheel while
+  retaining their authoritative source files in the repository-level
+  `data/` directory.
+- Made the default `rrs_model_3C_O25()` constructor operational after a
+  wheel-only installation, without requiring a repository checkout.
+- Preserved the explicit `data_folder` argument for selecting an alternative
+  or independently managed ancillary dataset.
+- Added clean-environment validation that installs the wheel, constructs the
+  model outside the repository, and loads the packaged ancillary resources.
+- Excluded demonstration datasets from the installed package because they
+  are not required by the core model.
+
+## [1.0.3] - 2026-08-27
+
+### Improved
+
+- Improved the Windows setup, example, and release helper scripts.
+- Added comprehensive documentation for the supplied examples.
+- Rebuilt the quick-start and time-series notebooks with consistent instructions for Visual Studio Code and Jupyter Notebook.
+- Corrected the handling of wavelength metadata in the supplied time-series example.
+- Extended the time-series example grid to 350–940 nm at 1 nm resolution.
+- Improved validation and interpretation of the example NetCDF output.
+
+### Removed
+
+- Removed Git LFS tracking and stored the ancillary model resources directly in Git.
+- Removed obsolete debugging and repository-initialization helpers.
 
 ## [1.0.2] - 2026-08-25
 

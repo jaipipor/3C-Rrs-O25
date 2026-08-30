@@ -8,8 +8,8 @@ O25-parameterisation of the 3C Rrs model and exposes a fast
 `fit_LtEs` method intended for repeated fitting calls.
 
 Key features:
-- Loads required auxiliary tables (aph templates, water IOPs, G-tables)
-  from a configurable `data_folder`.
+- Loads the bundled ancillary tables by default. An alternative
+  data_folder may be specified.
 - Uses small LRU caches to avoid repeated expensive interpolations
   when the same wavelength grids are used repeatedly.
 - Uses SciPy's RegularGridInterpolator for G-function evaluations.
@@ -21,6 +21,8 @@ rrs_model_3C_O25(data_folder)
     - vars_aph_v2.npz (contains `l_int`, `aph_norm_55`, `aph670_bounds`)
     - abs_scat_seawater_20d_35PSU_20230922_short.txt (aw, bbw table)
     - G0w.txt, G1w.txt, G0p.txt, G1p.txt (G-function tables)
+If data_folder is omitted, the ancillary scientific data distributed
+with the package is used.
 
 fit_LtEs(wl, LiEs, LtEs, params, weights, geom, anc, method='leastsq', verbose=True)
     Fit Lt/Es spectra returning a tuple: (result_object, Rrs_model, Rg).
@@ -42,6 +44,8 @@ from pathlib import Path
 
 import lmfit as lm
 import numpy as np
+
+from . import _data
 
 _NEGATIVE_RG_PENALTY_WEIGHT = 1e6
 
@@ -72,11 +76,9 @@ class rrs_model_3C_O25:
         """
 
         if data_folder is None:
-            repo_root = Path(__file__).parent.parent.parent
-            data_folder = repo_root / "data"
+            data_folder = Path(_data.__file__).resolve().parent
         else:
-            data_folder = Path(data_folder)  # convert to Path object for consistency
-
+            data_folder = Path(data_folder).expanduser().resolve()
         # store the path where auxiliary data files are expected
         self.data_folder = data_folder
         # precompute water IOP file content (raw array)
