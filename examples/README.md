@@ -95,4 +95,4 @@ examples/timeseries/src/utils.py
 
 ## 📚 Further information
 
-See the [main project README](../../README.md) for installation instructions, API usage, testing,information.
+See the [main project README](../README.md) for installation instructions, API usage, testing,information.

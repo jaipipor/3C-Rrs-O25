@@ -40,6 +40,9 @@ notebooks = [
     "jupyter",
     "nbclient",
     "nbformat",
+    "pandas",
+    "matplotlib",
+    "xarray",
 ]
 
 dev = [
