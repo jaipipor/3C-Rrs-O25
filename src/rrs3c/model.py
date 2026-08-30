@@ -8,8 +8,8 @@ O25-parameterisation of the 3C Rrs model and exposes a fast
 `fit_LtEs` method intended for repeated fitting calls.
 
 Key features:
-- Loads required auxiliary tables (aph templates, water IOPs, G-tables)
-  from a configurable `data_folder`.
+- Loads the bundled ancillary tables by default. An alternative
+  data_folder may be specified.
 - Uses small LRU caches to avoid repeated expensive interpolations
   when the same wavelength grids are used repeatedly.
 - Uses SciPy's RegularGridInterpolator for G-function evaluations.
@@ -21,6 +21,8 @@ rrs_model_3C_O25(data_folder)
     - vars_aph_v2.npz (contains `l_int`, `aph_norm_55`, `aph670_bounds`)
     - abs_scat_seawater_20d_35PSU_20230922_short.txt (aw, bbw table)
     - G0w.txt, G1w.txt, G0p.txt, G1p.txt (G-function tables)
+If data_folder is omitted, the ancillary scientific data distributed
+with the package is used.
 
 fit_LtEs(wl, LiEs, LtEs, params, weights, geom, anc, method='leastsq', verbose=True)
     Fit Lt/Es spectra returning a tuple: (result_object, Rrs_model, Rg).
@@ -42,6 +44,10 @@ from pathlib import Path
 
 import lmfit as lm
 import numpy as np
+
+from . import _data
+
+_NEGATIVE_RG_PENALTY_WEIGHT = 1e6
 
 
 # ---------------------------------------------------------------------------
@@ -65,16 +71,14 @@ class rrs_model_3C_O25:
         Parameters
         ----------
         data_folder : str or Path, optional
-            Folder containing the auxiliary model files. If None, the repository
-            default data folder is used.
+            Folder containing the auxiliary model files.
+            If None, the ancillary data distributed with the package are used.
         """
 
         if data_folder is None:
-            repo_root = Path(__file__).parent.parent.parent
-            data_folder = repo_root / "data"
+            data_folder = Path(_data.__file__).resolve().parent
         else:
-            data_folder = Path(data_folder)  # convert to Path object for consistency
-
+            data_folder = Path(data_folder).expanduser().resolve()
         # store the path where auxiliary data files are expected
         self.data_folder = data_folder
         # precompute water IOP file content (raw array)
@@ -96,19 +100,35 @@ class rrs_model_3C_O25:
         self.model = self.model_3C_O25()
 
     def _load_water_iops(self):
-        # Load water absorption (aw) and pure-water backscatter (bbw) table.
-        # Filename is historical; the file is expected to have three columns:
-        # wavelength, aw, bbw and some header lines (skipped with skiprows=8).
-        water_IOPs_pathfilename = (
+        """Load the pure-water absorption and backscattering table."""
+        water_iops_path = (
             self.data_folder / "abs_scat_seawater_20d_35PSU_20230922_short.txt"
         )
-        # aw: WOPP v3. bbw: Zhang 2009
-        raw = np.loadtxt(water_IOPs_pathfilename, skiprows=8)
-        # Intentionally discard the last row because the data file includes
-        # a trailing row not to indicate end of file.
-        raw = raw[:-1] if raw.shape[1] >= 3 else raw
-        # store the raw table for interpolation in the forward model
-        self.lw_aw_bw = raw  # columns: wavelength, aw, bbw
+
+        # Columns: wavelength, pure-water absorption aw,
+        # and pure-water backscattering bbw.
+        water_iops = np.loadtxt(
+            water_iops_path,
+            skiprows=8,
+        )
+
+        if water_iops.ndim != 2 or water_iops.shape[1] != 3:
+            raise ValueError(
+                "The water IOP table must contain exactly "
+                "three columns: wavelength, aw, and bbw"
+            )
+
+        # The source file ends with the sentinel row [-1, -1, -1].
+        if np.all(water_iops[-1] == -1.0):
+            water_iops = water_iops[:-1]
+
+        if not np.isfinite(water_iops).all():
+            raise ValueError("The water IOP table contains non-finite values")
+
+        if np.any(np.diff(water_iops[:, 0]) <= 0):
+            raise ValueError("Water IOP wavelengths must be strictly increasing")
+
+        self.lw_aw_bw = water_iops
 
     def _load_G_tables(self):
         # The G coefficients are stored in text files.
@@ -118,7 +138,7 @@ class rrs_model_3C_O25:
         ts = tv.copy()
 
         # helper to load and reshape
-        def ld3(fname):
+        def load_g_table(fname):
             path = self.data_folder / fname
             m = np.loadtxt(path)
             arr = m.reshape(len(az), len(ts), len(tv)).transpose(1, 2, 0)
@@ -129,30 +149,27 @@ class rrs_model_3C_O25:
         self._G_tv = tv
         self._G_az = az
         # load the 4 G tables as arrays
-        self._G0w = ld3("G0w.txt")
-        self._G1w = ld3("G1w.txt")
-        self._G0p = ld3("G0p.txt")
-        self._G1p = ld3("G1p.txt")
+        self._G0w = load_g_table("G0w.txt")
+        self._G1w = load_g_table("G1w.txt")
+        self._G0p = load_g_table("G0p.txt")
+        self._G1p = load_g_table("G1p.txt")
         # build scipy RegularGridInterpolator objects (fast C evaluation)
         from scipy.interpolate import RegularGridInterpolator
 
         # The interpolators are created using axes order (ts, tv, az)
-        self._G_i0 = RegularGridInterpolator((ts, tv, az), self._G0w)
-        self._G_i1 = RegularGridInterpolator((ts, tv, az), self._G1w)
-        self._G_i2 = RegularGridInterpolator((ts, tv, az), self._G0p)
-        self._G_i3 = RegularGridInterpolator((ts, tv, az), self._G1p)
+        self._G0w_interpolator = RegularGridInterpolator((ts, tv, az), self._G0w)
+        self._G1w_interpolator = RegularGridInterpolator((ts, tv, az), self._G1w)
+        self._G0p_interpolator = RegularGridInterpolator((ts, tv, az), self._G0p)
+        self._G1p_interpolator = RegularGridInterpolator((ts, tv, az), self._G1p)
 
     def _load_aph(self):
-        # --- load aph templates  ---
-        aph_pathfilename = self.data_folder / "vars_aph_v2.npz"
-        aph_data = np.load(aph_pathfilename)
-        # wavelength axis (squeezed in case it was saved as (nw,) or (1,nw))
-        self.l_int = aph_data["l_int"].squeeze()
-        # 'aph_norm_55' is expected to contain the 55 templates already normalized
-        # by their value around 670 nm
-        # vars_aph.npz is expected to contain 'aph_norm_55' and 'aph670_bounds'. Use them directly
-        self._aph_norm_55 = aph_data["aph_norm_55"]  # shape (55, nw)
-        self._aph670_bounds = aph_data["aph670_bounds"].squeeze()
+        """Load the phytoplankton absorption templates."""
+        aph_path = self.data_folder / "vars_aph_v2.npz"
+
+        with np.load(aph_path) as aph_data:
+            self.l_int = aph_data["l_int"].squeeze().copy()
+            self._aph_norm_55 = aph_data["aph_norm_55"].copy()
+            self._aph670_bounds = aph_data["aph670_bounds"].squeeze().copy()
 
     def _G_eval(
         self, s: float, v: float, a: float
@@ -174,14 +191,17 @@ class rrs_model_3C_O25:
             `(G0w, G1w, G0p, G1p)` evaluated at the requested geometry
         """
         # ensure absolute positive value for azimuth
-        a = abs(float(a))
-        pt = (float(s), float(v), a)
+        point = (
+            float(s),
+            float(v),
+            float(a),
+        )
         # use the interpolator objects created in _load_G_tables
         return (
-            float(self._G_i0(pt)),
-            float(self._G_i1(pt)),
-            float(self._G_i2(pt)),
-            float(self._G_i3(pt)),
+            float(self._G0w_interpolator(point)),
+            float(self._G1w_interpolator(point)),
+            float(self._G0p_interpolator(point)),
+            float(self._G1p_interpolator(point)),
         )
 
     def model_3C_O25(self):
@@ -216,8 +236,8 @@ class rrs_model_3C_O25:
             preG = getattr(self, "_G_precomputed", None)
 
             # unpack ancillary parameters and geometry
-            (am, rh, pressure) = anc
-            (theta_s, theta_v, phi) = geom
+            am, rh, pressure = anc
+            theta_s, theta_v, phi = geom
             cosths = np.cos(np.deg2rad(theta_s))
 
             # Atmospheric partition (Gregg and Carder 1990)
@@ -415,33 +435,43 @@ class rrs_model_3C_O25:
         """
 
         # ensure numpy arrays
-        wl = np.asarray(wl)
-        LiEs = np.asarray(LiEs)
-        LtEs = np.asarray(LtEs)
-        sqrt_weights = np.sqrt(np.asarray(weights))
+        wl = np.asarray(wl, dtype=float)
+        LiEs = np.asarray(LiEs, dtype=float)
+        LtEs = np.asarray(LtEs, dtype=float)
+        weights = np.asarray(weights, dtype=float)
 
-        # runtime validation
         if not (wl.ndim == LiEs.ndim == LtEs.ndim == weights.ndim == 1):
             raise ValueError("wl, LiEs, LtEs, and weights must be 1D arrays")
 
         if not (wl.shape == LiEs.shape == LtEs.shape == weights.shape):
             raise ValueError("wl, LiEs, LtEs, and weights must have the same shape")
 
-        if np.any(weights < 0):
-            raise ValueError("weights must be non-negative")
-
         if not np.all(np.isfinite(wl)):
             raise ValueError("wl contains non-finite values")
+
         if not np.all(np.isfinite(LiEs)):
             raise ValueError("LiEs contains non-finite values")
+
         if not np.all(np.isfinite(LtEs)):
             raise ValueError("LtEs contains non-finite values")
+
         if not np.all(np.isfinite(weights)):
             raise ValueError("weights contains non-finite values")
 
+        if wl.size < 2:
+            raise ValueError("wl must contain at least two wavelengths")
+
+        if np.any(np.diff(wl) <= 0):
+            raise ValueError("wl must be strictly increasing")
+
+        if np.any(weights < 0):
+            raise ValueError("weights must be non-negative")
+
+        sqrt_weights = np.sqrt(weights)
+
         wl_key = hashlib.sha1(wl.tobytes()).hexdigest()
         penalty_scale = np.sqrt(
-            1e6
+            _NEGATIVE_RG_PENALTY_WEIGHT
         )  # adjust this weight to control the strength of the penalty on negative Rg
 
         def resid(p):
@@ -477,6 +507,55 @@ class rrs_model_3C_O25:
             )  # linear in neg -> objective ~ penalty_weight * neg^2
 
             return np.concatenate([res_data, res_pen])  # fixed size: 2*nw
+
+        if len(geom) != 3:
+            raise ValueError("geom must contain theta_s, theta_v, and phi")
+
+        theta_s, theta_v, phi = map(float, geom)
+
+        if not np.all(
+            np.isfinite(
+                [
+                    theta_s,
+                    theta_v,
+                    phi,
+                ]
+            )
+        ):
+            raise ValueError("geom contains non-finite values")
+
+        if not 0.0 <= theta_s <= 87.5:
+            raise ValueError("theta_s must be between 0 and 87.5 degrees")
+
+        if not 0.0 <= theta_v <= 87.5:
+            raise ValueError("theta_v must be between 0 and 87.5 degrees")
+
+        if not 0.0 <= phi <= 180.0:
+            raise ValueError("phi must be between 0 and 180 degrees")
+
+        geom = (
+            theta_s,
+            theta_v,
+            phi,
+        )
+
+        required_params = (
+            "beta",
+            "alpha",
+            "C",
+            "N",
+            "Y",
+            "SNAP",
+            "Sg",
+            "rho",
+            "rho_d",
+            "rho_s",
+        )
+
+        missing_params = [name for name in required_params if name not in params]
+
+        if missing_params:
+            raise ValueError("Missing model parameters: " + ", ".join(missing_params))
 
         # Precompute G functions if geom is constant for this fit
         # _G_precomputed is used by model_3C to bypass interpolator calls
@@ -520,82 +599,3 @@ class rrs_model_3C_O25:
             if hasattr(self, "_G_precomputed"):
                 del self._G_precomputed
         return out, Rrs_mod, Rg
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import pandas as pd
-
-    # Example / diagnostic run when the module is executed directly.
-    # Adjust `data_folder` to your local path if needed.
-    repo_root = Path(__file__).parent.parent.parent
-    data_folder = repo_root / "data"
-    examples_folder = repo_root / "examples"
-    data = pd.read_csv(
-        examples_folder / "example_single_spectrum.csv",
-        index_col=0,
-        skiprows=15,
-    )
-    # extract wavelength and columns: Li, Lt, Es
-    wl = data.index.values
-    Li = data.iloc[:, 0].values
-    Lt = data.iloc[:, 1].values
-    Es = data.iloc[:, 2].values
-    geom = (59, 35, 100)  # Jetty 2
-    am = 4
-    rh = 60
-    pressure = 1013.25
-    model = rrs_model_3C_O25(data_folder=data_folder)
-    params = lm.Parameters()
-    params.add_many(
-        ("C", 5, True, 0.1, 50, None),
-        ("N", 1, True, 0.01, 100, None),
-        ("Y", 0.5, True, 0.01, 5, None),
-        ("SNAP", 0.015, True, 0.005, 0.03, None),
-        ("Sg", 0.015, True, 0.005, 0.03, None),
-        ("rho", 0.02, False, 0, 0.03, None),
-        ("rho_d", 0.0, True, 0, 10, None),
-        ("rho_s", 0.0, True, -0.01, 0.01, None),
-        ("alpha", 0.2, True, 0, 2, None),
-        ("beta", 0.05, True, 0, 1, None),
-    )
-
-    # weights: remove H2O band, downweight UV, upweight NIR
-    weights = np.ones_like(wl, dtype=float)
-    weights[(wl >= 760) & (wl <= 765)] = 0.0  # Remove the H2O feature
-    weights[wl > 800] = 2.0  # Upweight the NIR
-
-    # optional profiling block to inspect performance
-    import cProfile
-    import pstats
-
-    pr = cProfile.Profile()
-    pr.enable()
-    try:
-        reg, R_rs_mod, Rg = model.fit_LtEs(
-            wl, Li / Es, Lt / Es, params, weights, geom, anc=(am, rh, pressure)
-        )
-    except Exception as e:
-        # Ensure profiler is disabled on error and provide diagnostics
-        pr.disable()
-        print("Error during model.fit_LtEs:", repr(e))
-        # Re-raise so the calling environment is aware (remove the raise if you prefer to continue)
-        raise
-    else:
-        pr.disable()
-        ps = pstats.Stats(pr).sort_stats("cumtime")
-        ps.print_stats(30)
-
-    # Quick plotting of measured vs modeled quantities
-    plt.figure()
-    plt.grid(True)
-    plt.plot(wl, Lt / Es, label="L_t/E_s, measured")
-    plt.plot(wl, R_rs_mod + Rg, label="L_t/E_s, modeled")
-    plt.plot(wl, R_rs_mod, label=" R_rs, modeled")
-    plt.plot(wl, Rg, label="R_g, 3C output")
-    plt.plot(wl, Lt / Es - Rg, label="R_rs, 3C output")
-    plt.xlabel("wavelength (nm)")
-    plt.ylabel("Various reflectances (sr^(-1))")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()

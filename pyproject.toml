@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rrs3c"
-version = "1.0.3"
+version = "1.0.4"
 description = "Analytical 3C Remote Sensing Reflectance (Rrs) model, O25 variant."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,12 +35,23 @@ timeseries = [
     "xarray",
 ]
 
+notebooks = [
+    "ipykernel",
+    "jupyter",
+    "nbclient",
+    "nbformat",
+    "pandas",
+    "matplotlib",
+    "xarray",
+]
+
 dev = [
     "build",
     "pytest",
     "ruff",
-    "black",
+    "black[jupyter]",
     "pre-commit",
+    "twine",
 ]
 
 
@@ -50,8 +61,25 @@ Issues = "https://github.com/jaipipor/3C-Rrs-O25/issues"
 Changelog = "https://github.com/jaipipor/3C-Rrs-O25/blob/main/CHANGELOG.md"
 
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = [
+    "rrs3c",
+    "rrs3c._data",
+]
+
+[tool.setuptools.package-dir]
+rrs3c = "src/rrs3c"
+"rrs3c._data" = "data"
+
+[tool.setuptools.package-data]
+"rrs3c._data" = [
+    "G0p.txt",
+    "G0w.txt",
+    "G1p.txt",
+    "G1w.txt",
+    "abs_scat_seawater_20d_35PSU_20230922_short.txt",
+    "vars_aph_v2.npz",
+]
 
 
 [tool.black]

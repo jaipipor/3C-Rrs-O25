@@ -72,7 +72,7 @@ If plotting is enabled, diagnostic figures are also written to the output direct
 from rrs3c.model import rrs_model_3C_O25
 ```
 
-- The required ancillary model resources are read from the repository-level `data/` directory.
+- The model uses the ancillary resources distributed with the installed `rrs3c` package.
 
 ## 💡 Adapting the workflow
 
@@ -95,4 +95,4 @@ examples/timeseries/src/utils.py
 
 ## 📚 Further information
 
-See the [main project README](../../README.md) for installation instructions, API usage, testing,information.
+See the [main project README](../README.md) for installation, API usage, testing, and packaging information.
