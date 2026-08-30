@@ -18,14 +18,7 @@ if (-not (Test-Path -LiteralPath $Python)) {
 }
 
 & $Python -m pip install --upgrade pip
-& $Python -m pip install -e ".[examples,timeseries,dev]"
-
-if (Get-Command git-lfs -ErrorAction SilentlyContinue) {
-    git lfs install
-    git lfs pull
-} else {
-    Write-Host "Git LFS not found. Install it to retrieve the model data." -ForegroundColor Yellow
-}
+& $Python -m pip install -e ".[timeseries,notebooks,dev]"
 
 & $Python -m pre_commit install
 

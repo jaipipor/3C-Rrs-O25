@@ -71,8 +71,8 @@ class rrs_model_3C_O25:
         Parameters
         ----------
         data_folder : str or Path, optional
-            Folder containing the auxiliary model files. If None, the repository
-            default data folder is used.
+            Folder containing the auxiliary model files.
+            If None, the ancillary data distributed with the package are used.
         """
 
         if data_folder is None:

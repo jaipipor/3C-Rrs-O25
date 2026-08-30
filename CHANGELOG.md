@@ -63,7 +63,8 @@ and the project follows https://semver.org/ where practical.
 - Corrected internal handling and reporting of invalid model geometry.
 - Corrected several stale or inconsistent notebook checks related to the
   time-series wavelength grid.
-- Replaced fixed assumptions
+- Replaced fixed assumptions about the number of time-series wavelength
+  bands with validation based on the actual NetCDF wavelength coordinate.
 
 ### Packaging
 

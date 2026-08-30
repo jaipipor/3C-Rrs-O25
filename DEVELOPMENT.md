@@ -456,13 +456,13 @@ Push-Location $env:TEMP
 Verify the imported package:
 
 ```powershell
-& "$wheelTest\Scripts\python.exe" -c 'import rrs3c; print(rrs3c.__file__)'
+& "$wheelTest\Scripts\python.exe" -c "import rrs3c; print('Imported package:', rrs3c.__file__)"
 ```
 
 Verify model construction:
 
 ```powershell
-& "$wheelTest\Scripts\python.exe" -c 'from rrs3c import rrs_model_3C_O25; model = rrs_model_3C_O25(); print("Data folder:", model.data_folder); print("Water table shape:", model.lw_aw_bw.shape); print("Wheel construction passed")'
+& "$wheelTest\Scripts\python.exe" -c "from rrs3c import rrs_model_3C_O25; model = rrs_model_3C_O25(); print('Data folder:', model.data_folder); print('Water table shape:', model.lw_aw_bw.shape); print('Wheel construction passed')"
 ```
 
 The data folder should point inside:
